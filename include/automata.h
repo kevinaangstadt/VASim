@@ -30,6 +30,12 @@ private:
     bool profile;
     bool quiet;
     bool report;
+    
+    bool saveStateVector;
+    uint64_t stateVectorFrequency;
+    std::string stateVectorFileName;
+    std::ofstream stateVectorFile;
+    
     bool dump_state;
     uint32_t dump_state_cycle;
     
@@ -75,6 +81,9 @@ public:
     void enableProfile();
     void enableReport();
     void enableQuiet();
+    void enableSaveStateVector();
+    void setStateVectorFrequency(uint64_t freq);
+    void setStateVectorFileName(std::string name);
     void enableDumpState(uint32_t);
     void disableProfile();
     

@@ -28,6 +28,8 @@ public:
     bool empty() const {
         return (top == 0);
     }
+    
+    T* getInternal();
 };
 
 /*
@@ -87,6 +89,11 @@ inline T Stack<T>::back() const{
 template <class T>
 inline uint32_t Stack<T>::size() {
     return top;
+}
+
+template <class T>
+inline T* Stack<T>::getInternal() {
+    return stack;
 }
 
 #endif

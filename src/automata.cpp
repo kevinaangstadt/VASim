@@ -17,6 +17,8 @@ Automata::Automata() {
     report = false;
     profile = false;
     quiet = false;
+    saveStateVector = false;
+    stateVectorFileName = "";
     cycle = 0;
 
     // debug
@@ -46,6 +48,11 @@ Automata::Automata(string filename): filename(filename),
 
     // Enable output by default
     quiet = false;
+                                         
+
+    // Disable saving of state vector by default
+    saveStateVector = false;
+    stateVectorFileName = "";
 
     // for all elements
     for(auto e : elements) {
@@ -568,6 +575,12 @@ vector<Automata*> Automata::splitConnectedComponents() {
             a->enableReport();
         }
         
+        if(saveStateVector) {
+            a->enableSaveStateVector();
+            a->setStateVectorFileName(stateVectorFileName);
+            a->setStateVectorFrequency(stateVectorFrequency);
+        }
+        
         if(dump_state){
             a->enableDumpState(dump_state_cycle);
         }
@@ -746,6 +759,27 @@ void Automata::enableQuiet() {
     quiet = true;
 }
 
+void Automata::enableSaveStateVector() {
+    cout << "DEBUG turning save state on" << endl;
+    saveStateVector = true;
+}
+
+/*
+ *
+ */
+void Automata::setStateVectorFrequency(uint64_t freq) {
+    stateVectorFrequency = freq;
+}
+
+/*
+ *
+ */
+void Automata::setStateVectorFileName(string name) {
+    stateVectorFileName = name;
+    cout << "DEBUG filename: " << stateVectorFileName << endl;
+}
+
+
 /*
  *
  */
@@ -805,7 +839,8 @@ void Automata::print() {
 }
 
 void Automata::simulate(uint8_t symbol) {
-
+    //cout << "DEBUG filename: " << stateVectorFileName << endl;
+    
     input = symbol;
 
     if(DEBUG)
@@ -827,6 +862,23 @@ void Automata::simulate(uint8_t symbol) {
 
     if(profile)
         activatedHist.push_back(activatedSTEs.size());
+    
+    // FIXME active states are known here
+    //cout << "DEBUG saving: " << saveStateVector << endl;
+    if(saveStateVector && cycle % stateVectorFrequency == 0) {
+        cout << "DEBUG saving state vector" << endl;
+        // it's time to write out the state vector
+        // activatedSTEs is a stack holding all the currently active STEs
+        stateVectorFile << cycle << endl;
+        stateVectorFile << activatedSTEs.size() + specialElements.size() << endl;
+
+        // write the active STEs to the file
+        for(int i=0; i < activatedSTEs.size(); i++) {
+        //for(auto e : activatedSTEs.getInternal()) {
+            stateVectorFile << (activatedSTEs.getInternal())[i]->getId() << ", 1" << endl;
+        }
+    }
+
 
     if(dump_state && (dump_state_cycle == cycle)){
         dumpSTEState("stes_" + to_string(cycle) + ".state");
@@ -843,6 +895,13 @@ void Automata::simulate(uint8_t symbol) {
         // NEW CIRCUIT SIMULATION CORE
         specialElementSimulation();
 
+        // now write the special elements to the vector file
+        if(saveStateVector && cycle % stateVectorFrequency == 0) {
+            for(auto pair : specialElements) {
+                SpecialElement *e = static_cast<SpecialElement *>(pair.second);
+                stateVectorFile << e->toString() << endl;
+            }
+        }
         // PARALLEL STAGE 4
         // READING
         // calculate logic and counter functions
@@ -867,6 +926,10 @@ void Automata::simulate(uint8_t symbol) {
  *
  */
 void Automata::simulate(uint8_t *inputs, uint32_t start_index, uint32_t length, bool step) {
+
+    if(saveStateVector) {
+        stateVectorFile.open(stateVectorFileName);
+    }
 
     if(DEBUG)
         cout << "STARTING SIMULATION..." << endl;
@@ -944,6 +1007,9 @@ void Automata::simulate(uint8_t *inputs, uint32_t start_index, uint32_t length, 
         writeIntVectorToFile(activatedHist, "activated_per_cycle.out");
     
         cout << endl;
+    }
+    if(saveStateVector) {
+        stateVectorFile.close();
     }
 }
 

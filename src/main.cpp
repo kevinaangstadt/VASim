@@ -50,6 +50,10 @@ void usage(char * argv) {
     printf("  -P, --packets             Specify number of threads to compute input stream. NOT SAFE. TODO: allow for overlap between packets\n");
 
     printf("\n MISC:\n");
+	printf("\nSTATE VECTOR:\n");
+	printf("  -S, --state-vector        Specify a file to save the sate vector to\n");
+	printf("  -F, --state-vector-freq   Specify how frequently to save the state vector\n");
+    printf("\n");
     printf("  -h, --help                Print this help and exit\n");
     printf("\n");
 }
@@ -175,9 +179,12 @@ int main(int argc, char * argv[]) {
     bool to_dfa = false;
     bool to_hdl = false;
     bool to_blif = false;
+    bool saveStateVector = false;
+    string stateVectorFileName = "";
     uint32_t max_level = 10000; // artificial (and arbitrary) max depth of attempted left-minimization
     uint32_t num_threads = 1;
     uint32_t num_threads_packets = 1;
+    uint64_t stateVectorFrequency = 0;
     bool to_graph = false;
     int32_t fanin_limit = -1;
     int32_t fanout_limit = -1;
@@ -218,6 +225,8 @@ int main(int argc, char * argv[]) {
         {"graph",         no_argument, NULL, graph_switch},
         {"enforce-fanin",         required_argument, NULL, fanin_switch},
         {"enforce-fanout",         required_argument, NULL, fanout_switch},
+        {"state-vector",         required_argument, NULL, 'S'},
+        {"state-vector-freq",         required_argument, NULL, 'F'},
         {"dump-state",         required_argument, NULL, dump_state_switch},
         {NULL,            0,           NULL, 0  }
     };
@@ -309,6 +318,17 @@ int main(int argc, char * argv[]) {
         case 'B':
             to_blif = true;
             break;
+                
+
+		case 'S':
+			cout << "DEBUG we saw the flag" << endl;
+			saveStateVector = true;
+			stateVectorFileName = optarg;
+			break;
+		
+		case 'F':
+			stateVectorFrequency = atoi(optarg);
+			break;
 
         case 'h':
             usage(argv[0]);
@@ -425,6 +445,15 @@ int main(int argc, char * argv[]) {
 
     if(quiet)
         ap.enableQuiet();
+    
+    cout << "DEBUG: " << saveStateVector << endl;
+	if(saveStateVector) {
+		cout << "DEBUG saving" << endl;
+		ap.enableSaveStateVector();
+		ap.setStateVectorFrequency(stateVectorFrequency);
+        ap.setStateVectorFileName(stateVectorFileName);
+	}
+
         
     // Optimize automata before identifying connected components
     // "Global" optimizations

@@ -269,7 +269,8 @@ bool Counter::deactivate() {
  */
 string Counter::toString() {
 
-    return "COUNTER TO STRING NOT IMPLEMENTED YET";
+    return id + ", " + std::to_string(value);
+    //return "COUNTER TO STRING NOT IMPLEMENTED YET";
 }
 
 /*
