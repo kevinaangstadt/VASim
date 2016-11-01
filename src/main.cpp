@@ -321,7 +321,6 @@ int main(int argc, char * argv[]) {
                 
 
 		case 'S':
-			cout << "DEBUG we saw the flag" << endl;
 			saveStateVector = true;
 			stateVectorFileName = optarg;
 			break;
@@ -446,9 +445,7 @@ int main(int argc, char * argv[]) {
     if(quiet)
         ap.enableQuiet();
     
-    cout << "DEBUG: " << saveStateVector << endl;
 	if(saveStateVector) {
-		cout << "DEBUG saving" << endl;
 		ap.enableSaveStateVector();
 		ap.setStateVectorFrequency(stateVectorFrequency);
         ap.setStateVectorFileName(stateVectorFileName);

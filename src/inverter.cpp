@@ -51,10 +51,16 @@ bool Inverter::calculate() {
  */
 string Inverter::toString() {
 
-    string str("Inverter:");
-    str.append("\tid=");
-    str.append(id);
-    return str;
+    string str(id + ", ");
+    if (activated)
+        return str + "1";
+    else
+        return str + "0";
+
+    //string str("Inverter:");
+    //str.append("\tid=");
+    //str.append(id);
+    //return str;
 }
 
 /*

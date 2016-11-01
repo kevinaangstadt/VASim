@@ -51,11 +51,17 @@ bool AND::calculate() {
  */
 string AND::toString() {
 
-    string str("AND:");
-    str.append("\tid=");
-    str.append(id);
-
-    return str;
+    string str(id + ", ");
+    if (activated)
+        return str + "1";
+    else
+        return str + "0";
+    
+    //string str("AND:");
+    //str.append("\tid=");
+    //str.append(id);
+    //
+    //return str;
 }
 
 /*

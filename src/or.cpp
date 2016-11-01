@@ -43,12 +43,16 @@ bool OR::calculate() {
  */
 string OR::toString() {
 
-    string str("OR:");
-    str.append("\tid=");
-    str.append(id);
-
-
-    return str;
+    //string str("OR:");
+    //str.append("\tid=");
+    //str.append(id);
+    
+    
+    string str(id + ", ");
+    if (activated)
+        return str + "1";
+    else
+        return str + "0";
 }
 
 /*

@@ -45,12 +45,18 @@ bool NOR::calculate() {
  */
 string NOR::toString() {
 
-    string str("NOR:");
-    str.append("\tid=");
-    str.append(id);
+    string str(id + ", ");
+    if (activated)
+        return str + "1";
+    else
+        return str + "0";
 
-
-    return str;
+    //string str("NOR:");
+    //str.append("\tid=");
+    //str.append(id);
+    //
+    //
+    //return str;
 }
 
 /*

@@ -760,7 +760,6 @@ void Automata::enableQuiet() {
 }
 
 void Automata::enableSaveStateVector() {
-    cout << "DEBUG turning save state on" << endl;
     saveStateVector = true;
 }
 
@@ -776,7 +775,6 @@ void Automata::setStateVectorFrequency(uint64_t freq) {
  */
 void Automata::setStateVectorFileName(string name) {
     stateVectorFileName = name;
-    cout << "DEBUG filename: " << stateVectorFileName << endl;
 }
 
 
@@ -855,6 +853,21 @@ void Automata::simulate(uint8_t symbol) {
     if(profile)
         enabledHist.push_back(enabledSTEs.size());
 
+    
+    //cout << "DEBUG saving: " << saveStateVector << endl;
+    if(saveStateVector && cycle % stateVectorFrequency == 0) {
+        // it's time to write out the state vector
+        // activatedSTEs is a stack holding all the currently active STEs
+        stateVectorFile << cycle << endl;
+        stateVectorFile << enabledSTEs.size() + specialElements.size() << endl;
+
+        // write the active STEs to the file
+        for(int i=0; i < enabledSTEs.size(); i++) {
+        //for(auto e : activatedSTEs.getInternal()) {
+            stateVectorFile << (enabledSTEs.getInternal())[i]->getId() << ", 1" << endl;
+        }
+    }
+    
     // PARALLEL STAGE 2
     // READING
     // if STEs are enabled and we match, activate
@@ -863,21 +876,8 @@ void Automata::simulate(uint8_t symbol) {
     if(profile)
         activatedHist.push_back(activatedSTEs.size());
     
-    // FIXME active states are known here
-    //cout << "DEBUG saving: " << saveStateVector << endl;
-    if(saveStateVector && cycle % stateVectorFrequency == 0) {
-        cout << "DEBUG saving state vector" << endl;
-        // it's time to write out the state vector
-        // activatedSTEs is a stack holding all the currently active STEs
-        stateVectorFile << cycle << endl;
-        stateVectorFile << activatedSTEs.size() + specialElements.size() << endl;
+    
 
-        // write the active STEs to the file
-        for(int i=0; i < activatedSTEs.size(); i++) {
-        //for(auto e : activatedSTEs.getInternal()) {
-            stateVectorFile << (activatedSTEs.getInternal())[i]->getId() << ", 1" << endl;
-        }
-    }
 
 
     if(dump_state && (dump_state_cycle == cycle)){
