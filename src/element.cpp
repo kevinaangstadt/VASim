@@ -423,6 +423,11 @@ uint32_t Element::enableChildSpecialElements(queue<Element *> *enabledSpecialEls
     return numEnabledSpecEls;
 }
 
+void Element::stageOneHooks() {
+    return;
+}
+
+
 /*
  *
  */

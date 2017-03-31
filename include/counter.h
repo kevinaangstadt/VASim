@@ -30,6 +30,9 @@ public:
     virtual std::string toString();
     virtual std::string toANML();
     virtual std::string toHDL(std::unordered_map<std::string, std::string>);
+
+    bool cnt_trig, rst_trig;
+    virtual void stageOneHooks();
 };
 
 #endif

@@ -1048,7 +1048,7 @@ void Automata::printReportBatchSim() {
 
     // print report vector
     for(auto s: reportVector) {
-        unsigned int cycle = s.first + 1;
+        uint32_t cycle = s.first + 1;
         if(id.empty()){
             cout << "Element id: " << s.second << " reporting at index " << to_string(cycle) << endl;
         }else{
@@ -1620,8 +1620,8 @@ void Automata::automataToNFAFile(string out_fn) {
     unordered_map<string, int> id_map;
     unordered_map<string, bool> marked;
     queue<string> to_process;
-    unsigned int state_counter = 0;
-    unsigned int accept_counter = 1;
+    uint32_t state_counter = 0;
+    uint32_t accept_counter = 1;
 
     string str = "";
 
@@ -2482,6 +2482,11 @@ inline void Automata::stageOne() {
             }
         }
     }
+    
+    // get rid of state vector info
+    for(auto pair : specialElements) {
+        pair.second->stageOneHooks();
+    }
 
 }
 
@@ -2597,6 +2602,7 @@ inline void Automata::stageFour() {
         
         // calulate underlying special function
         bool emitOutput = spel->calculate();
+        
         if(DEBUG)
             cout << "CALCULATED: " << emitOutput << endl;
         

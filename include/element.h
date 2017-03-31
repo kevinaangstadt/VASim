@@ -83,6 +83,9 @@ public:
     virtual bool isStateful();
     bool isSelfRef();
     
+
+    virtual void stageOneHooks();
+    
     // backport additions
     bool isCut();
     void setCut(bool);

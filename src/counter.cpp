@@ -13,6 +13,7 @@ Counter::Counter(string id, uint32_t target, string at_target) : SpecialElement(
     setTarget(target);
     setMode(at_target);
     value = 0;
+    cnt_trig = rst_trig = false;
 }
 
 /*
@@ -33,8 +34,8 @@ bool Counter::calculate() {
     bool retval = false;
 
     // if any inputs are to the cnt input
-    bool count = false;
-    bool reset = false;
+    bool count = cnt_trig = false;
+    bool reset = rst_trig = false;
 
     // gather input signals from all ports
     for(auto i : inputs) {
@@ -47,7 +48,7 @@ bool Counter::calculate() {
             }
 
             // count up
-            count = true;
+            count = cnt_trig = true;
 
         } else if((i.first.compare(i.first.size() - 4, i.first.size() - 1, ":rst") == 0) &&
                   i.second == true) {
@@ -56,7 +57,7 @@ bool Counter::calculate() {
                 cout << "COUNTER ACTIVATED ON PORT: " << i.first << endl;
 
             // reset counter
-            reset = true;
+            reset = rst_trig = true;
         }  
     }
 
@@ -264,12 +265,24 @@ bool Counter::deactivate() {
     return retval;
 }
 
+void Counter::stageOneHooks() {
+    cnt_trig = rst_trig = false;
+}
+
 /*
  *
  */
 string Counter::toString() {
+    if (cnt_trig && rst_trig) {
+        return id + ", " + std::to_string(value) + ",cnt:rst";
+    } else if (cnt_trig) {
+        return id + ", " + std::to_string(value) + ",cnt";;
+    } else if (rst_trig) {
+        return id + ", " + std::to_string(value) + ",rst";;
+    } else {
+        return id + ", " + std::to_string(value);
+    }
 
-    return id + ", " + std::to_string(value);
     //return "COUNTER TO STRING NOT IMPLEMENTED YET";
 }
 
