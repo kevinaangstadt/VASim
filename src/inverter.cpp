@@ -43,7 +43,7 @@ bool Inverter::calculate() {
     if(DEBUG)
         cout << "RESULT: " << result << endl;
     
-    cout <<id << " inv " << result << endl
+    cout <<id << " inv " << result << endl;
 
     return result;
 }
