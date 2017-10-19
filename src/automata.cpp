@@ -838,7 +838,12 @@ void Automata::print() {
 
 void Automata::simulate(uint8_t symbol) {
     //cout << "DEBUG filename: " << stateVectorFileName << endl;
-    
+    map<string, bool> tmpEls;
+    cout << cycle << endl;
+    if(saveStateVector && cycle % stateVectorFrequency == 0) {
+        tmpEls = map<string, bool>();
+    }
+
     input = symbol;
 
     if(DEBUG)
@@ -864,14 +869,28 @@ void Automata::simulate(uint8_t symbol) {
         // write the active STEs to the file
         for(int i=0; i < enabledSTEs.size(); i++) {
         //for(auto e : activatedSTEs.getInternal()) {
-            stateVectorFile << (enabledSTEs.getInternal())[i]->getId() << ", 1" << endl;
-        }
+            //stateVectorFile << (enabledSTEs.getInternal())[i]->getId() << ", " << to_string((enabledSTEs.getInternal())[i]->isActivated()) << endl;
+            tmpEls.insert(map<string,bool>::value_type((enabledSTEs.getInternal())[i]->getId(), (enabledSTEs.getInternal())[i]->isActivated()));        }
     }
     
     // PARALLEL STAGE 2
     // READING
     // if STEs are enabled and we match, activate
     stageTwo();
+    
+    if(saveStateVector && cycle % stateVectorFrequency == 0) {
+        for(int i=0; i < activatedSTEs.size(); i++) {
+            //cout << "updating " << (activatedSTEs.getInternal())[i]->getId() << " to be " << (activatedSTEs.getInternal())[i]->isActivated() << endl;
+        //for(auto e : activatedSTEs.getInternal()) {
+            //stateVectorFile << (enabledSTEs.getInternal())[i]->getId() << ", " << to_string((enabledSTEs.getInternal())[i]->isActivated()) << endl;
+            tmpEls[(activatedSTEs.getInternal())[i]->getId()] = (activatedSTEs.getInternal())[i]->isActivated();
+        }
+
+        for (auto e : tmpEls) {
+            stateVectorFile << e.first << ", " << to_string(e.second) << endl;
+        }
+    }
+
 
     if(profile)
         activatedHist.push_back(activatedSTEs.size());
@@ -2529,7 +2548,7 @@ inline void Automata::stageTwo() {
 
             // report
             if(report && s->isReporting()) {
-
+                cout << "ping"<<endl;
                 reportVector.push_back(make_pair(cycle, s->getId()));
             }
 

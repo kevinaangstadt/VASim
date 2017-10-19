@@ -117,7 +117,7 @@ bool Counter::calculate() {
             cout << "SKIPPING COMPUTATION" << endl;
     }
     
-    cout << "After calc: cnt_trig " << to_string(cnt_trig) << " rst_trig " << to_string(rst_trig) << endl;
+    cout << "After calc: value " << value << " retval " << retval << endl;
 
     return retval;
 }
@@ -275,7 +275,6 @@ void Counter::stageOneHooks() {
  *
  */
 string Counter::toString() {
-    cout << "cnt_trig " << to_string(cnt_trig) << " rst_trig " << to_string(rst_trig) << endl;
     if (cnt_trig && rst_trig) {
         return id + ", " + std::to_string(value) + ",cnt:rst";
     } else if (cnt_trig) {

@@ -19,5 +19,10 @@ public:
     virtual std::string toString() = 0;
     virtual std::string toANML() = 0;
     virtual bool isStateful();
+
+    virtual void stageOneHooks();
+
+protected:
+    bool was_enabled;
 };
 #endif

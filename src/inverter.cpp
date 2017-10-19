@@ -42,6 +42,8 @@ bool Inverter::calculate() {
 
     if(DEBUG)
         cout << "RESULT: " << result << endl;
+    
+    cout <<id << " inv " << result << endl
 
     return result;
 }
@@ -52,7 +54,7 @@ bool Inverter::calculate() {
 string Inverter::toString() {
 
     string str(id + ", ");
-    if (activated)
+    if (was_enabled)
         return str + "1";
     else
         return str + "0";
