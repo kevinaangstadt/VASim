@@ -21,8 +21,8 @@ CXXFLAGS= -I$(IDIR) -I$(MNRL)/include -I$(PUGI)/src -pthread --std=c++11
 OPTS = -Ofast -march=native -m64
 ARFLAGS = rcs
 
-#CXXFLAGS += $(OPTS)
-CXXFLAGS += -g
+CXXFLAGS += $(OPTS)
+#CXXFLAGS += -g
 
 _DEPS = *.h
 _OBJ = errors.o util.o ste.o pdstate.o ANMLParser.o MNRLAdapter.o automata.o element.o specialElement.o gate.o and.o or.o nor.o counter.o inverter.o 
