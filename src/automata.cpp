@@ -30,6 +30,9 @@ Automata::Automata() {
     // End of data is false until last cycle
     endOfData = false;
     
+    // add a base stack value
+    pdstack.push_back(0);
+    
     // debug
     dump_state = false;
     dump_state_cycle = 0;
@@ -122,6 +125,10 @@ void Automata::reset() {
 
     // unmark all elements
     unmarkAllElements();
+    
+    // clear the stack
+    while(!pdstack.empty())
+        pdstack.pop_back();
     
     // clear all functional maps
     while(!enabledSTEs.empty())
@@ -798,7 +805,7 @@ void Automata::print() {
 /**
  * Simulates the automata on a single input symbol. Injects is a list of element IDs injecting enable signals into the automata. All children of each injecting Element is enabled for the next symbol cycle.
  */
-void Automata::simulate(uint8_t symbol, vector<string> injects) {
+bool Automata::simulate(uint8_t symbol, vector<string> injects) {
 
     // enable all element children of injected signal
     for(string inject : injects) {
@@ -810,18 +817,53 @@ void Automata::simulate(uint8_t symbol, vector<string> injects) {
         
     }
 
-    simulate(symbol);
+    return simulate(symbol);
 }
 
 /**
  * Simulates the automata on a single input symbol.
  */
-void Automata::simulate(uint8_t symbol) {
+bool Automata::simulate(uint8_t symbol) {
 
+    // -----------------------------
+    // Compute stack matches and determine if we're in an eps cycle
+    bool not_eps = computeStackMatches();
+    // -----------------------------
+    
     
     // -----------------------------
     // Step 1: if STEs are enabled and we match, activate
-    computeSTEMatches(symbol);
+    // NEW: if we're not an epsilon
+    if(not_eps) {
+        computeSTEMatches(symbol);
+    } else {
+        // we're going to just activate all of these
+        while(!enabledSTEs.empty()) {
+            Element * e = enabledSTEs.back();
+            switch(e->getType()) {
+            case STE_T:
+            case PDSTATE_T:
+                STE *s = dynamic_cast<STE*>(e);
+                s->activate();
+
+                // we need to handle reporting
+                // report
+				if(report && s->isReporting()) {
+					if(s->isEod()) {
+						if(endOfData)
+							reportVector.push_back(make_pair(cycle, s->getId()));
+					}else{
+						reportVector.push_back(make_pair(cycle, s->getId()));
+					}
+				}
+
+                activatedSTEs.push_back(s);
+                s->disable();
+                break;
+            }
+            enabledSTEs.pop_back();
+        }
+    }
     // -----------------------------
 
     
@@ -834,6 +876,11 @@ void Automata::simulate(uint8_t symbol) {
     if(dump_state && (dump_state_cycle == cycle)){
         dumpSTEState("stes_" + to_string(cycle) + ".state");
     }
+    
+    // -----------------------------
+    // Perform Stack Operations
+    performStackOperations();
+    // -----------------------------
 
     // -----------------------------
     // Step 2: enable children of matching STEs
@@ -859,8 +906,12 @@ void Automata::simulate(uint8_t symbol) {
         profileEnables();
     }
     
-    // advance cycle count
-    tick();
+    if(not_eps) {
+        // advance cycle count
+        tick();
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -986,8 +1037,9 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
                 //
             }
         }
-
-        simulate(inputs[i]);
+        
+        //keep simulating until it's not an epsilon...
+        while(!simulate(inputs[i]));
 
     }
 
@@ -2527,6 +2579,67 @@ void Automata::enableStartStates(bool enableStartOfData) {
 }
 
 /**
+ * For all PDStates that are enabled, compare with the top of the stack.  Pass STEs right through
+ * @return true if input should be processed (no epsilon PDStates), false otherwise
+ */
+bool Automata::computeStackMatches() {
+    // short circuit no computation
+    if(enabledSTEs.empty()) {
+        return true;
+    }
+    
+    Stack<Element *> tmp = enabledSTEs;
+    enabledSTEs = Stack<Element *>();
+    bool eps = false;
+    
+    // for each enabled element
+    while(!tmp.empty()) {
+        // peek at element
+        Element *e = tmp.back();
+        
+        switch(e->getType()) {
+        case PDSTATE_T: {
+            PDState *pd = dynamic_cast<PDState *>(e);
+            
+            if(pd->smatch(pdstack.back())) {
+                // check if this is epsilon
+                if(pd->isInputEpsilon()) {
+                    if(!eps) {
+                        // we need to disable everything we've already processed
+                        while(!enabledSTEs.empty()) {
+                            Element *r = enabledSTEs.back();
+                            r->disable();
+                            enabledSTEs.pop_back();
+                        }
+                    }
+                    eps = true;
+                } else if (eps) {
+                    // we've already seen an epsilon and need to ignore
+                    pd->disable();
+                    break;
+                }
+                
+                enabledSTEs.push_back(e);
+                
+            } else {
+                // disable the element
+                pd->disable();
+            }
+            break;
+        }
+        default:
+            enabledSTEs.push_back(e);
+            break;
+        }
+        
+        // remove the element
+        tmp.pop_back();
+    }
+    
+    return !eps;
+}
+
+/**
  * If an STE is enabled and matches on the current input, activate. If the STE is a report STE, record a report in the report vector. 
  */
 void Automata::computeSTEMatches(uint8_t symbol) {
@@ -2567,6 +2680,48 @@ void Automata::computeSTEMatches(uint8_t symbol) {
 
         // remove STE from the queue
         enabledSTEs.pop_back();        
+    }
+}
+
+/**
+ * If PDStates are active, perform their respective push and pop operations
+ *
+ * Note: this is really meant for when there is one element active; otherwise computation is ND
+ */
+void Automata::performStackOperations() {
+    Stack<STE*> tmp = activatedSTEs;
+    activatedSTEs = Stack<STE*>();
+    
+    while(!tmp.empty()) {
+        // peek the STE
+        STE *s = tmp.back();
+        
+        // we only want to handle PDStates
+        switch(s->getType()) {
+        case PDSTATE_T: {
+            PDState *pd = dynamic_cast<PDState *>(s);
+            
+            if(pd->getPop()) {
+                // do a stack pop
+                pdstack.pop_back();
+            }
+            
+            if(pd->getPush()) {
+                pdstack.push_back(pd->getPushChar());
+            }
+            
+            break;
+        }
+        default:
+            // do nothing
+            break;
+        }
+        
+        // add to our tmp stack
+        activatedSTEs.push_back(s);
+        
+        // remove the STE
+        tmp.pop_back();
     }
 }
 

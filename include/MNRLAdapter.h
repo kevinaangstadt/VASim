@@ -10,6 +10,7 @@
 #include "nor.h"
 #include "counter.h"
 #include "inverter.h"
+#include "pdstate.h"
 
 #include <mnrl.hpp>
 #include <string>
@@ -33,6 +34,7 @@ class MNRLAdapter{
         STE *parseSTE(std::shared_ptr<MNRL::MNRLHState>);
         Gate *parseGate(std::shared_ptr<MNRL::MNRLBoolean>);
         Counter *parseCounter(std::shared_ptr<MNRL::MNRLUpCounter>);
+        PDState *parsePDState(std::shared_ptr<MNRL::MNRLHPDState>);
 };
 
 #endif

@@ -74,6 +74,67 @@ STE *MNRLAdapter::parseSTE(shared_ptr<MNRLHState> hState) {
     return s;
 }
 
+PDState *MNRLAdapter::parsePDState(shared_ptr<MNRLHPDState> hPDState) {
+    
+    string id = hPDState->getId();
+    string symbol_set = hPDState->getSymbolSet();
+    string stack_set = hPDState->getStackSet();
+    
+    // we're going to cheat and use a bitset to find the push char
+    // (MNRL let's this be a string)
+    std::bitset<256> tmp;
+    setRange(tmp, 0, 255, 0);
+
+    // parse the push symbol to the bitset
+    parseSymbolSet(tmp, hPDState->getPushSymbol());
+    
+    
+    
+    uint8_t push_char;
+    bool done = false;
+    
+    // go through our bitset to find the character
+    
+    for(uint8_t i=0; i<255; i++) {
+        if(tmp.test(i)) {
+            if(!done) {
+                push_char = i;
+                // mark that we saw it
+                done = true;
+            } else {
+                // houston, we have a problem
+                cerr << "Multiple Characters in Stack Push (" <<
+                        hPDState->getPushSymbol() <<
+                        ") for node " <<
+                        id <<
+                        ": " <<
+                        unsigned(push_char) <<
+                        " and " <<
+                        unsigned(i) <<
+                        endl;
+                exit(1);
+            }
+        }
+    }
+    
+    bool pop = hPDState->getPop();
+    bool eps = hPDState->isEpsilonInput();
+    bool push = hPDState->doesStackPush();
+    
+    string start = convertStart(hPDState->getEnable());
+    
+    PDState *s = new PDState(id,symbol_set,stack_set,push_char,push,pop,eps,start);
+    s->setIntId(unique_ids++);
+    
+    s->setReporting(hPDState->getReport());
+    
+    addOutputs(hPDState, s);
+    
+    s->setReportCode(hPDState->getReportId()->toString());
+
+    return s;    
+}
+
 Gate *MNRLAdapter::parseGate(shared_ptr<MNRLBoolean> a) {
     string id = a->getId();
     
@@ -168,6 +229,12 @@ void MNRLAdapter::parse(unordered_map<string, Element*> &elements,
                     s = parseCounter(dynamic_pointer_cast<MNRLUpCounter>(node.second));
                     specialElements[s->getId()] = dynamic_cast<Gate *>(s);
                     break;
+                case MNRLDefs::NodeType::HPDSTATE:
+                    s = parsePDState(dynamic_pointer_cast<MNRLHPDState>(node.second));
+                    if(dynamic_cast<STE *>(s)->isStart()) {
+                        starts.push_back(dynamic_cast<STE *>(s));
+                    }
+                    break;
                 default:
                     cerr << "Unsupported Node: " << node.second->getId() << endl;
                     exit(1);
@@ -181,8 +248,8 @@ void MNRLAdapter::parse(unordered_map<string, Element*> &elements,
             }
         }
         
-    } catch (...) {
-        cerr << "Unexpected Parsing Error. Exiting." << endl;
+    } catch(std::exception& e) {
+        cerr << e.what() << endl << "Unexpected Parsing Error. Exiting." << endl ;
         exit(1);
     }
     

@@ -24,7 +24,8 @@ enum ElementType {
     NOR_T,
     AND_T,
     INVERTER_T,
-    COUNTER_T
+    COUNTER_T,
+    PDSTATE_T
 };
 
 class Element {
