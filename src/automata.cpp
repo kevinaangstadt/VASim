@@ -14,7 +14,7 @@ Automata::Automata() {
 
     // Initialize status code
     setErrorCode(E_SUCCESS);
-    
+
     // Disable report vector by default
     report = false;
 
@@ -29,10 +29,10 @@ Automata::Automata() {
 
     // End of data is false until last cycle
     endOfData = false;
-    
+
     // add a base stack value
     pdstack.push_back(0);
-    
+
     // debug
     dump_state = false;
     dump_state_cycle = 0;
@@ -42,7 +42,7 @@ Automata::Automata() {
  *
  */
 void Automata::finalizeAutomata() {
-    
+
     // Populate Elements with back references and pointers
     for(auto e : elements) {
 
@@ -67,23 +67,23 @@ void Automata::parseAutomataFile(string fn, string filetype) {
 
     // set filename
     filename = fn;
-        
+
     if(filetype.compare("mnrl") == 0){
         // Read in automata description from MNRL file
         MNRLAdapter parser(filename);
         // TODO:: GET THIS TO RETURN PROPER ERROR CODE
-        parser.parse(elements, starts, reports, specialElements, &id, activateNoInputSpecialElements);  
+        parser.parse(elements, starts, reports, specialElements, &id, activateNoInputSpecialElements);
     } else {
         // Read in automata description from ANML file
         ANMLParser parser(filename);
         vasim_err_t result = parser.parse(elements, starts, reports, specialElements, &id, activateNoInputSpecialElements);
 
-        setErrorCode(result);      
+        setErrorCode(result);
     }
 
 }
 
-/** 
+/**
  * Constructs an Automata object from a given ANML or MNRL homogeneous automata description file and the file type "mnrl" or "anml".
  */
 Automata::Automata(string fn, string filetype) : Automata() {
@@ -99,7 +99,7 @@ Automata::Automata(string fn, string filetype) : Automata() {
  */
 Automata::Automata(string fn) : Automata() {
 
-    
+
     // Read Automata from file based on extension
     if(getFileExt(fn).compare("mnrl") == 0) {
         parseAutomataFile(fn, "mnrl");
@@ -125,11 +125,11 @@ void Automata::reset() {
 
     // unmark all elements
     unmarkAllElements();
-    
+
     // clear the stack
     while(!pdstack.empty())
         pdstack.pop_back();
-    
+
     // clear all functional maps
     while(!enabledSTEs.empty())
         enabledSTEs.pop_back();
@@ -139,7 +139,7 @@ void Automata::reset() {
 
     while(!latchedSTEs.empty())
         latchedSTEs.pop_back();
-    
+
     while(!enabledSpecialElements.empty())
         enabledSpecialElements.pop();
 
@@ -147,7 +147,7 @@ void Automata::reset() {
         activatedSpecialElements.pop();
 
     latchedSpecialElements.clear();
-    activateNoInputSpecialElements.clear();    
+    activateNoInputSpecialElements.clear();
 
     // Reset all simulation stats
     activationVector.clear();
@@ -172,7 +172,7 @@ void Automata::reset() {
 
     // reset cycle counter to be 0
     cycle = 0;
-    
+
 }
 
 /**
@@ -181,7 +181,7 @@ void Automata::reset() {
 void Automata::addSTE(STE *ste, vector<string> &outputs) {
 
     rawAddSTE(ste);
-    
+
     // for all outputs, add a proper edge
     for(auto str : outputs) {
 
@@ -189,7 +189,7 @@ void Automata::addSTE(STE *ste, vector<string> &outputs) {
     }
 }
 
-/** 
+/**
  *Adds an STE to the current automata. Does not update any dangling connections.
  */
 void Automata::rawAddSTE(STE *ste) {
@@ -234,7 +234,7 @@ vector<Automata *> Automata::generateGNFAs(){
         cout << "  GENERATING GNFAs..." << endl;
         cout << "  Original size: " << elements.size() << endl;
     }
-    
+
     // maps nodes to a list of start/end nodes
     unordered_map<string, vector<string>> start_markers;
     unordered_map<string, vector<string>> end_markers;
@@ -245,7 +245,7 @@ vector<Automata *> Automata::generateGNFAs(){
         // label all reachable states using breadth first search
         unordered_map<string, bool> visited;
         for(auto el : elements){
-            STE *ste = static_cast<STE*>(el.second); 
+            STE *ste = static_cast<STE*>(el.second);
             visited[ste->getId()] = false;
         }
 
@@ -283,7 +283,7 @@ vector<Automata *> Automata::generateGNFAs(){
     // find all end states
     vector<STE*> ends;
     for(auto el : elements){
-        STE *ste = static_cast<STE*>(el.second); 
+        STE *ste = static_cast<STE*>(el.second);
         if(ste->isReporting())
             ends.push_back(ste);
     }
@@ -295,7 +295,7 @@ vector<Automata *> Automata::generateGNFAs(){
         // label all reachable states using reverse breadth first search
         unordered_map<string, bool> visited;
         for(auto el : elements){
-            STE *ste = static_cast<STE*>(el.second); 
+            STE *ste = static_cast<STE*>(el.second);
             visited[ste->getId()] = false;
         }
         queue<STE*> work_queue;
@@ -405,21 +405,21 @@ void Automata::leftMergeSTEs(STE *ste1, STE *ste2) {
     // 1) add outputs to ste1
     // 2) adjust inputs of output target nodes to reflect ste1, not ste2
     for(string str : ste2->getOutputs()) {
-        
+
         // add outputs from ste2 to outputs list of ste1
         if(Element::stripPort(str).compare(ste2->getId()) != 0){
             ste1->addOutput(str);
             Element * e = getElement(str);
             // we may have already removed this
             if( e != NULL ){
-                pair<Element *, string> output(e, Element::getPort(str)); 
+                pair<Element *, string> output(e, Element::getPort(str));
                 ste1->addOutputPointer(output);
             }
-            
+
             // adjust inputs of output to reflect new parent
             // inputs are of the form "fromNodeId:toPort"
-            // remove old input to child from ste2            
-            
+            // remove old input to child from ste2
+
             string port = Element::getPort(str);
             //if(!port.empty())
             //port = ":" + port;
@@ -431,27 +431,27 @@ void Automata::leftMergeSTEs(STE *ste1, STE *ste2) {
             }
         }
     }
-    
-    // for all input edges; 
+
+    // for all input edges;
     // 1) remove the output to ste2 from the parent node if it exists
     //    output to ste1 must necessarily exist
     for(auto e : ste2->getInputs()) {
-        
+
         // if the input node is not ourself
         if(Element::stripPort(e.first).compare(ste2->getId()) != 0) {
-            
+
             // get parent node if it exists
             Element * parent = getElement(e.first);
-            
+
             string port = Element::getPort(e.first);
             if(!port.empty())
                 port = ":" + port;
             parent->removeOutput(ste2->getId() + port);
-            pair<Element *, string> output(ste2, ste2->getId() + port); 
+            pair<Element *, string> output(ste2, ste2->getId() + port);
             parent->removeOutputPointer(output);
         }
     }
-    
+
     // SANITY CHECK IF WE STILL EXIST
     for(auto e : ste2->getInputs()) {
         if(Element::stripPort(e.first).compare(ste2->getId()) != 0) {
@@ -574,7 +574,7 @@ vector<Automata*> Automata::splitConnectedComponents() {
         if(report){
             a->enableReport();
         }
-        
+
         if(dump_state){
             a->enableDumpState(dump_state_cycle);
         }
@@ -619,7 +619,7 @@ Automata *Automata::clone() {
 
     if(dump_state)
         ap->enableDumpState(dump_state_cycle);
-    
+
     return ap;
 }
 
@@ -775,7 +775,7 @@ void Automata::enableQuiet() {
 }
 
 /**
- * Enables dynamic state logging. Dumps all states that activated on cycle dump_cycle. Acts as a debug break point. Currently only works for STEs. 
+ * Enables dynamic state logging. Dumps all states that activated on cycle dump_cycle. Acts as a debug break point. Currently only works for STEs.
  */
 void Automata::enableDumpState(uint64_t dump_cycle) {
     dump_state = true;
@@ -814,10 +814,90 @@ bool Automata::simulate(uint8_t symbol, vector<string> injects) {
         el->enableChildSTEs(&enabledSTEs);
         if(specialElements.size() > 0)
             el->enableChildSpecialElements(&enabledSpecialElements);
-        
+
     }
 
     return simulate(symbol);
+}
+
+/**
+ * Hacky way of dealing with epsilon transitions at the end
+ * @return returns false if computation occurred (just like with an input)
+ */
+bool Automata::simulate() {
+  bool not_eps = computeStackMatches();
+  if(not_eps) {
+    return true;
+  }
+  // Step 1: calculate activations
+  // // we're going to just activate all of these
+  while(!enabledSTEs.empty()) {
+      Element * e = enabledSTEs.back();
+      switch(e->getType()) {
+      case STE_T:
+      case PDSTATE_T:
+          STE *s = dynamic_cast<STE*>(e);
+          s->activate();
+
+          // we need to handle reporting
+          // report
+          if(report && s->isReporting()) {
+                 if(s->isEod()) {
+                         if(endOfData)
+                                reportVector.push_back(make_pair(cycle, s->getId()));
+                 }else{
+                         reportVector.push_back(make_pair(cycle, s->getId()));
+                 }
+          }
+
+          activatedSTEs.push_back(s);
+          s->disable();
+          break;
+      }
+      enabledSTEs.pop_back();
+  }
+
+  // Activation Statistics
+  if(profile){
+      profileActivations();
+  }
+
+  // Debug state
+  if(dump_state && (dump_state_cycle == cycle)){
+      cout << "====================" << endl << " Cycle " << cycle << endl << "====================" << endl;
+      dumpSTEState("stes_" + to_string(cycle) + ".state");
+  }
+
+  // -----------------------------
+  // Perform Stack Operations
+  performStackOperations();
+  // -----------------------------
+
+  // -----------------------------
+  // Step 2: enable children of matching STEs
+  enableSTEMatchingChildren();
+  // -----------------------------
+
+
+  // -----------------------------
+  // Step 3:  enable all-input start states
+  enableStartStates(false);
+  // -----------------------------
+
+
+  // -----------------------------
+  // Step 4: special element computation
+  if(specialElements.size() > 0){
+      specialElementSimulation();
+  }
+  // -----------------------------
+
+  // Enabled Statistics
+  if(profile){
+      profileEnables();
+  }
+
+  return false;
 }
 
 /**
@@ -829,8 +909,8 @@ bool Automata::simulate(uint8_t symbol) {
     // Compute stack matches and determine if we're in an eps cycle
     bool not_eps = computeStackMatches();
     // -----------------------------
-    
-    
+
+
     // -----------------------------
     // Step 1: if STEs are enabled and we match, activate
     // NEW: if we're not an epsilon
@@ -848,14 +928,14 @@ bool Automata::simulate(uint8_t symbol) {
 
                 // we need to handle reporting
                 // report
-				if(report && s->isReporting()) {
-					if(s->isEod()) {
-						if(endOfData)
-							reportVector.push_back(make_pair(cycle, s->getId()));
-					}else{
-						reportVector.push_back(make_pair(cycle, s->getId()));
-					}
-				}
+				        if(report && s->isReporting()) {
+					             if(s->isEod()) {
+						                   if(endOfData)
+							                        reportVector.push_back(make_pair(cycle, s->getId()));
+					             }else{
+						                   reportVector.push_back(make_pair(cycle, s->getId()));
+					             }
+				        }
 
                 activatedSTEs.push_back(s);
                 s->disable();
@@ -866,7 +946,7 @@ bool Automata::simulate(uint8_t symbol) {
     }
     // -----------------------------
 
-    
+
     // Activation Statistics
     if(profile){
         profileActivations();
@@ -874,9 +954,10 @@ bool Automata::simulate(uint8_t symbol) {
 
     // Debug state
     if(dump_state && (dump_state_cycle == cycle)){
+        cout << "====================" << endl << " Cycle " << cycle << endl << "====================" << endl;
         dumpSTEState("stes_" + to_string(cycle) + ".state");
     }
-    
+
     // -----------------------------
     // Perform Stack Operations
     performStackOperations();
@@ -893,10 +974,10 @@ bool Automata::simulate(uint8_t symbol) {
     enableStartStates(false);
     // -----------------------------
 
-    
+
     // -----------------------------
     // Step 4: special element computation
-    if(specialElements.size() > 0){        
+    if(specialElements.size() > 0){
         specialElementSimulation();
     }
     // -----------------------------
@@ -905,7 +986,7 @@ bool Automata::simulate(uint8_t symbol) {
     if(profile){
         profileEnables();
     }
-    
+
     if(not_eps) {
         // advance cycle count
         tick();
@@ -923,22 +1004,22 @@ void Automata::profileEnables() {
     while(!enabledLastCycle.empty()){
         enabledLastCycle.pop();
     }
-    
+
     // per element statistics
     queue<Element*> tmp;
     while(!enabledSTEs.empty()) {
-        
+
         Element* s = enabledSTEs.back();
         tmp.push(s);
         enabledSTEs.pop_back();
-        
+
         // track number of times each ste was enabled per step
         enabledCount[s] = enabledCount[s] + 1;
-        
+
         // track the STEs that were enabled on the last cycle
         enabledLastCycle.push(s);
     }
-    
+
     //push back onto queue to proceed to next stage
     while(!tmp.empty()) {
         enabledSTEs.push_back(tmp.front());
@@ -959,22 +1040,22 @@ void Automata::profileActivations() {
     while(!reportedLastCycle.empty()){
         reportedLastCycle.pop();
     }
-    
+
     // Get per cycle stats
     activatedHist.push_back(activatedSTEs.size());
-    
+
     // Get per STE stats
     // Check number of times each ste was activated per step
     queue<STE*> tmp;
     while(!activatedSTEs.empty()) {
-        
+
         STE* s = activatedSTEs.back();
         tmp.push(s);
         activatedSTEs.pop_back();
-        
+
         // track number of times each STE activated
         activatedCount[s] = activatedCount[s] + 1;
-        
+
         // track the STEs that activated on the last cycle
         activatedLastCycle.push(s);
 
@@ -983,19 +1064,19 @@ void Automata::profileActivations() {
             reportedLastCycle.push(s);
         }
     }
-    
+
     //push back onto queue to proceed to next stage
     while(!tmp.empty()) {
         activatedSTEs.push_back(tmp.front());
         tmp.pop();
-    }        
+    }
 }
 
 /**
  * Enables start states and primes simulation. Must be executed before simulation.
  */
 void Automata::initializeSimulation() {
-    
+
     // Initiate simulation by enabling all start states
     bool enableStartOfDataStates = true;
     enableStartStates(enableStartOfDataStates);
@@ -1003,7 +1084,7 @@ void Automata::initializeSimulation() {
     //
     if(profile)
         profileEnables();
-    
+
 }
 
 /**
@@ -1015,14 +1096,14 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
 
     // primes all data structures for simulation
     initializeSimulation();
-    
+
     // for all inputs
     for(uint64_t i = start_index; i < start_index + length; i = i + 1) {
 
         // set end of data flag
         if( i == total_length - 1 )
             endOfData = true;;
-        
+
         // measure progress on longer runs
         if(!quiet) {
 
@@ -1037,11 +1118,14 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
                 //
             }
         }
-        
+
         //keep simulating until it's not an epsilon...
         while(!simulate(inputs[i]));
 
     }
+
+    // keep running to finish up eps transitions
+    while(enabledSTEs.size() > 0 && !simulate());
 
     if(!quiet) {
         cout << "\x1B[2K"; // Erase the entire current line.
@@ -1051,7 +1135,7 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
         flush(cout);
         cout << endl;
     }
- 
+
     if(profile) {
 
         cout << endl << "Dynamic Statistics: " << endl;
@@ -1070,15 +1154,15 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
         // cal distribution
 
         // build histogram of activations
-        buildActivationHistogram("activation_hist.out");        
-        
+        buildActivationHistogram("activation_hist.out");
+
         // print activation stats
         calcEnableDistribution();
-        
+
         // write to file
         writeIntVectorToFile(enabledHist, "enabled_per_cycle.out");
         writeIntVectorToFile(activatedHist, "activated_per_cycle.out");
-    
+
         cout << endl;
     }
 }
@@ -1119,7 +1203,7 @@ void Automata::printReportBatchSim() {
  * Calculates proportions of elements that capture total amounts of automata activity. Prints automata proportions to stdout.
  */
 void Automata::calcEnableDistribution() {
-    
+
     // gather enables into vector
     vector<uint32_t> enables;
     uint64_t sum = 0;
@@ -1127,10 +1211,10 @@ void Automata::calcEnableDistribution() {
         enables.push_back(e.second);
         sum += e.second;
     }
-    
+
     // sort vector
     sort(enables.rbegin(), enables.rend());
-    
+
     // report how many STEs it takes to capture 90, 99, 99.9, 99.99, 99.999, 99.9999, 99.99999, 99.999999% activity
     bool one = false;
     bool two = false;
@@ -1246,7 +1330,7 @@ string Automata::getElementColor(string id) {
 
     int red, green, blue;
 
-    int scale = (int)((double)hits/(double)maxActivations * 511); 
+    int scale = (int)((double)hits/(double)maxActivations * 511);
 
     if(scale > 255) {
         red = 255;
@@ -1280,7 +1364,7 @@ string Automata::getElementColor(string id) {
         green = 255;
         blue = 255;
     }
-    
+
     /*
       if(scale > 255) {
       scale = scale - 256;
@@ -1321,11 +1405,11 @@ string Automata::getElementColorLog(string id) {
     double scale = (1.0-ratio);
     int range = 255;
     scale = (double)range * scale;
-   
+
     red = scale;
     green = scale;
     blue = scale;
-    
+
     if(ratio < .01){
         red = 255;
         green = 0;
@@ -1355,7 +1439,7 @@ string Automata::getElementColorLog(string id) {
         green = 255;
         blue = 255;
     }
-    
+
 
     char hexcol[16];
 
@@ -1375,7 +1459,7 @@ string Automata::getLogElementColor(string id) {
 
     int red, green, blue;
 
-    int scale = (int)(ratio * 511); 
+    int scale = (int)(ratio * 511);
 
     scale = log2(scale)/log2(512)*511;
 
@@ -1430,47 +1514,47 @@ void Automata::automataToDotFile(string out_fn) {
 
         // label
         str.append("[label=\"") ;
-        //str.append(e.first); 
+        //str.append(e.first);
 
         if(e.second->isSpecialElement()) {
-            str.append(e.first); 
+            str.append(e.first);
         } else {
             STE * ste = dynamic_cast<STE *>(e.second);
-            str.append(e.first); 
+            str.append(e.first);
             str += ":" + ste->getSymbolSet();
         }
 
 
         // heatmap color
-        str.append("\" style=filled fillcolor="); 
+        str.append("\" style=filled fillcolor=");
         if(profile) {
             //fillcolor = getElementColorLog(e.first);
             fillcolor = getElementColor(e.first);
         }
-        str.append(fillcolor); 
+        str.append(fillcolor);
 
         //start state double circle/report double octagon
         if(!e.second->isSpecialElement()) {
             STE * ste = dynamic_cast<STE *>(e.second);
             if(ste->isStart()) {
                 if(ste->isReporting()) {
-                    str.append(" shape=doubleoctagon"); 
+                    str.append(" shape=doubleoctagon");
                 }else {
-                    str.append(" shape=doublecircle"); 
-                } 
+                    str.append(" shape=doublecircle");
+                }
             } else {
                 if(ste->isReporting()) {
                     str.append(" shape=octagon");
                 }else{
                     str.append(" shape=circle");
-                } 
+                }
             }
 
         } else {
-            str.append(" shape=rectangle"); 
+            str.append(" shape=rectangle");
         }
 
-        str.append(" ];\n"); 
+        str.append(" ];\n");
         id++;
     }
 
@@ -1495,7 +1579,7 @@ void Automata::removeOrGates() {
 
     // for each special element that is an OR gate
     queue<Element *> toRemove;
-    for(auto el : specialElements) { 
+    for(auto el : specialElements) {
         SpecialElement * specel = el.second;
 
         // if we're not an OR gate, continue
@@ -1539,7 +1623,7 @@ void Automata::removeOrGates() {
     }
 
     // remove OR gates from the automata
-    while(!toRemove.empty()) { 
+    while(!toRemove.empty()) {
         removeElement(toRemove.front());
         toRemove.pop();
     }
@@ -1589,7 +1673,7 @@ void Automata::removeCounters() {
 
     // remove Counters from the automata
     // replace with the same number of STEs
-    while(!toRemove.empty()) { 
+    while(!toRemove.empty()) {
 
         Counter * counter = static_cast<Counter *>(toRemove.front());
         toRemove.pop();
@@ -1620,7 +1704,7 @@ void Automata::removeCounters() {
                                       "none");
 
 
-            cout << "Adding new ste: " << i << endl;            
+            cout << "Adding new ste: " << i << endl;
             // adjust pointers
             // remove all current pointers from cloned node
             input_next->clearOutputs();
@@ -1672,7 +1756,7 @@ void Automata::automataToNFAFile(string out_fn) {
             return;
         }
     }
-    
+
     unordered_map<string, int> id_map;
     unordered_map<string, bool> marked;
     queue<string> to_process;
@@ -1684,9 +1768,9 @@ void Automata::automataToNFAFile(string out_fn) {
     // Header
     str += "#NFA\n";
 
-    /* 
+    /*
      * Because each AP state is an NFA edge, we must instantiate
-     * a start NFA state and add transitions to all start states 
+     * a start NFA state and add transitions to all start states
      * in the automata.
      */
     str += to_string(state_counter++) + ": initial\n";
@@ -1719,7 +1803,7 @@ void Automata::automataToNFAFile(string out_fn) {
 
         marked[start->getId()] = true;
 
-        string state = to_string(id_map[start->getId()]);         
+        string state = to_string(id_map[start->getId()]);
 
         if(start->isReporting()) {
             str += state + " : ";
@@ -1727,7 +1811,7 @@ void Automata::automataToNFAFile(string out_fn) {
             str += "accepting " + to_string(accept_counter++) + "\n";
         }
 
-        // for every output, 
+        // for every output,
         for(string s : start->getOutputs()) {
             STE * ste = dynamic_cast<STE *>(getElement(s));
 
@@ -1735,7 +1819,7 @@ void Automata::automataToNFAFile(string out_fn) {
             if(id_map.find(s) == id_map.end())
                 id_map[s] = state_counter++;
 
-            string to_state = to_string(id_map[s]);             
+            string to_state = to_string(id_map[s]);
             //add a transition rule for every int in the int_set
             bool first = true;
             for(uint32_t i : ste->getIntegerSymbolSet()) {
@@ -1781,20 +1865,20 @@ void Automata::automataToNFAFile(string out_fn) {
             id_map[id] = state_counter++;
 
         //add element as an output node
-        string state = to_string(id_map[id]);             
+        string state = to_string(id_map[id]);
         if(ste->isReporting()){
             str += to_string(id_map[id]) + " : ";
             str += "accepting " + to_string(accept_counter++) + "\n";
         }
 
-        // for every output, 
+        // for every output,
         for(string s : ste->getOutputs()) {
             STE * ste_to = dynamic_cast<STE *>(getElement(s));
             //create a new state and make a transition
             if(id_map.find(s) == id_map.end())
                 id_map[s] = state_counter++;
 
-            string to_state = to_string(id_map[s]);             
+            string to_state = to_string(id_map[s]);
             bool first = true;
             for(uint32_t i : ste_to->getIntegerSymbolSet()) {
                 if(first) {
@@ -1841,7 +1925,7 @@ void Automata::automataToANMLFile(string out_fn) {
         els.push_back(el);
     }
     sort(els.begin(), els.end());
-    
+
     for(auto el : els) {
         str += el.second->toANML();
         str += "\n";
@@ -1860,19 +1944,19 @@ void Automata::automataToANMLFile(string out_fn) {
  */
 void Automata::automataToMNRLFile(string out_fn) {
     MNRLNetwork net("vasim");
-    
+
     // add all the elements
     for(auto el : elements) {
         net.addNode(el.second->toMNRLObj());
     }
-    
+
     // add all the connections
     for(auto el : elements) {
         for(auto dst : el.second->getOutputs()) {
             // We're going to make some assumptions here
-            
+
             string dst_port = Element::getPort(dst);
-            
+
             // determine the corret destination port
             switch(getElement(dst)->getType()) {
                 case STE_T:
@@ -1886,7 +1970,7 @@ void Automata::automataToMNRLFile(string out_fn) {
                     dst_port = "b0"; // this is the first boolean port
                     break;
             }
-            
+
             net.addConnection(
                 el.second->getId(),// src id
                 MNRLDefs::H_STATE_OUTPUT,// src port
@@ -1894,12 +1978,12 @@ void Automata::automataToMNRLFile(string out_fn) {
                 dst_port// dest port
             );
         }
-        
+
     }
-    
+
     // write the net to a file
     net.exportToFile(out_fn);
-    
+
 }
 
 /**
@@ -1930,7 +2014,7 @@ void Automata::automataToHDLFile(string out_fn) {
     str += "\tClk,\n";
     str += "\tRst_n,\n";
     str += "\tSymbol";
-    
+
     if(getReports().size() > 0){
         // print output signals
         for(Element * el: getReports()){
@@ -1948,7 +2032,7 @@ void Automata::automataToHDLFile(string out_fn) {
     str += "\tinput\tClk;\n";
     str += "\tinput\tRst_n;\n";
     str += "\tinput [0:7]\tSymbol;\n";
-    
+
     // outputs
     for(Element *el : getReports()){
         str += "\toutput\t" + module_name + "$" + el->getId() + ";\n";
@@ -1975,11 +2059,11 @@ void Automata::automataToHDLFile(string out_fn) {
         if(el->isStateful()) {
             str += "\treg\t" + el->getId() + ";\n";
         }else{
-            // if we are stateless logic 
+            // if we are stateless logic
             // just declare a wire
             str += "\twire\t" + el->getId() + ";\n";
         }
-        
+
         id_reg_map[el->getId()] = el->getId();
     }
 
@@ -2009,7 +2093,7 @@ void Automata::automataToHDLFile(string out_fn) {
     str += "\t\tend\n";
     str += "\tend\n\n";
 
-    
+
     // print logic for every Element
     // ONLY HANDLES:
     // STES
@@ -2038,7 +2122,7 @@ void Automata::automataToHDLFile(string out_fn) {
                 str += "\tassign " + enable_name + " = 1'b1;";
             } else {
                 str += "\tassign " + enable_name + " = ";
-                
+
                 // for all the inputs
                 bool first = true;
                 for(auto in : s->getInputs()){
@@ -2049,19 +2133,19 @@ void Automata::automataToHDLFile(string out_fn) {
                         str += " | " + id_reg_map[in.first];
                     }
                 }
-    
-                if(s->startIsStartOfData()) 
+
+                if(s->startIsStartOfData())
                     str += " | " + start_of_data;
-    
+
                 str += ";\n";
             }
-                
+
             //
             str += "\n\t// Match logic and activation register\n";
-    
+
             //
             str += "\t(*dont_touch = \"true\"*) always @(posedge Clk) // should not be optimized\n";
-    
+
             string reg_name = id_reg_map[s->getId()];
             str += "\tbegin\n";
             str += "\t\tif (Rst_n == 1'b0)\n";
@@ -2078,9 +2162,9 @@ void Automata::automataToHDLFile(string out_fn) {
             str += "\t\t\tendcase\n";
             str += "\t\telse " + reg_name + " <= 1'b0;\n";
             str += "\tend\n\n";
-    
+
             // build or gate for enable inputs
-            
+
         }
 
     }
@@ -2088,8 +2172,8 @@ void Automata::automataToHDLFile(string out_fn) {
 
     //// print module footer
     str += "endmodule\n";
-    
-    cout << "Writing Verilog to file: " << out_fn << endl << endl; 
+
+    cout << "Writing Verilog to file: " << out_fn << endl << endl;
 
     // write NFA to file
     writeStringToFile(str, out_fn);
@@ -2104,7 +2188,7 @@ void Automata::automataToBLIFFile(string out_fn) {
 
     // emit header for module
     str += ".model blif_by_VASim\n";
-    
+
     // emit inputs
     str += ".inputs ";
 
@@ -2125,7 +2209,7 @@ void Automata::automataToBLIFFile(string out_fn) {
     // emit STEs
     //------------------------------
     // data structure to track enable inputs for each ste
-    unordered_map<string, uint32_t> enable_counter; 
+    unordered_map<string, uint32_t> enable_counter;
 
     // initialize portnumber map to all 0
     for(auto e : elements){
@@ -2136,8 +2220,8 @@ void Automata::automataToBLIFFile(string out_fn) {
         }
 
         STE *s = static_cast<STE*>(el);
-        
-        enable_counter[s->getId()] = 0;    
+
+        enable_counter[s->getId()] = 0;
     }
 
     // for every STE, emit a proper .subckt
@@ -2149,7 +2233,7 @@ void Automata::automataToBLIFFile(string out_fn) {
         }
 
         STE *s = static_cast<STE*>(el);
-    
+
         str += ".subckt ste ";
 
         // INPUTS
@@ -2165,7 +2249,7 @@ void Automata::automataToBLIFFile(string out_fn) {
                 continue;
 
             // emit proper signal
-            string wire = parent; 
+            string wire = parent;
             uint32_t portnumber = enable_counter[s->getId()];
             str += "enable[" + to_string(portnumber) + "]=" + wire + " ";
             enable_counter[s->getId()] = portnumber + 1;
@@ -2184,7 +2268,7 @@ void Automata::automataToBLIFFile(string out_fn) {
         string wire = s->getId();
         if(!s->isReporting())
             str += "active=" + wire + " ";
-        
+
         // CLOCK
         str += "clock=top.clock ";
 
@@ -2221,19 +2305,19 @@ void Automata::automataToGraphFile(string out_fn) {
 
 
     string str = "";
-    
+
     // num nodes header
     str += to_string(elements.size()) + "\n";
 
     for(auto e : elements){
-        
+
         Element *el = e.second;
         if(!el->isSpecialElement()){
             STE *s = static_cast<STE*>(el);
-            
+
             // emit ID
             str += s->getId() + " ";
-            
+
             // emit char reach
             for(int i = 255; i >= 0; i--){
                 if(s->match(i)){
@@ -2271,11 +2355,11 @@ void Automata::automataToGraphFile(string out_fn) {
 
     // emit all edges
     for(auto e : elements){
-        
+
         Element *el = e.second;
         if(!el->isSpecialElement()){
             STE *s = static_cast<STE*>(el);
-            
+
             str += s->getId() + " ";
 
             for(string out : s->getOutputs()){
@@ -2361,11 +2445,11 @@ set<STE*>* Automata::follow(uint32_t symbol, set<STE*>* state_set) {
     for(STE *start : getStarts()){
         if(start->match((uint8_t)symbol)){
             // add to follow_set
-            //cout << start->getId() << " matched on input " << endl; 
+            //cout << start->getId() << " matched on input " << endl;
             follow_set->insert(start);
         }
     }
-    
+
     // for each STE in the set
     for(STE *ste : *state_set){
         // for each child
@@ -2417,12 +2501,12 @@ Automata* Automata::generateDFA() {
 
     // initialize failure state
     set<STE*>* start_state = new set<STE*>;
-    
+
     // push impl start onto workq
     workq.push(make_pair(start_state, (STE*)NULL));
 
     uint32_t dfa_state_counter = 0;
-    
+
     // main loop
     while(!workq.empty()){
 
@@ -2443,16 +2527,16 @@ Automata* Automata::generateDFA() {
         set<set<STE*>*, bool(*)(set<STE*>*, set<STE*>*)> potential_dfa_states (fn_pt);
         // maps sets to STEs
         unordered_map<set<STE*>*, STE*> ste_table;
-        
+
         // for each character
         for(uint32_t i = 0; i < 256; i++){
-            
+
             //get the follow state
             set<STE*>* potential_dfa_state = follow(i, dfa_state);
 
-            bool found = false;          
+            bool found = false;
             uint32_t unique_state_id = 0;
-            
+
             // look through all existing potential DFA states
             // is this potential DFA state unique?
             set<set<STE*>*>::const_iterator got;
@@ -2460,7 +2544,7 @@ Automata* Automata::generateDFA() {
             if(got != potential_dfa_states.end()){
                 found = true;
             }
-        
+
             // if DFA state is unique
             if(!found){
                 //cout << "found unique!" << endl;
@@ -2487,25 +2571,25 @@ Automata* Automata::generateDFA() {
                 ste_table[potential_dfa_state] = new_dfa_ste;
 
             }else{
-                
+
                 // we already created this potential DFA state so retrieve it
                 STE* existing_dfa_ste = ste_table[(*got)];
 
                 // add new symbol to its charset (idempotent)
                 existing_dfa_ste->addSymbolToSymbolSet(i);
-            
+
                 // delete the potential object
                 delete potential_dfa_state;
-                
-            }            
-            
+
+            }
+
         } // character for loop
 
         // once we have constructed the potential new DFA states
         //  we must check if they already exist in the global DFA data struct
         //  this includes comparing NFA states, and also character set of DFA STE
         for(set<STE*>* potential_dfa_state : potential_dfa_states){
-            
+
             // see if we exist in the global dfa states set
             set<pair<set<STE*>*, STE*>>::const_iterator got2;
             STE * potential_ste = ste_table[potential_dfa_state];
@@ -2553,7 +2637,7 @@ Automata* Automata::generateDFA() {
     }
 
     return dfa;
- 
+
 }
 
 
@@ -2566,8 +2650,8 @@ void Automata::enableStartStates(bool enableStartOfData) {
     for(STE * s: starts) {
 
         // Enable if start is "all input"
-        if(s->startIsAllInput() || (enableStartOfData && s->startIsStartOfData())) { 
-           
+        if(s->startIsAllInput() || (enableStartOfData && s->startIsStartOfData())) {
+
             // add to enabled queue if we were not already enabled
             if(!s->isEnabled()){
                 s->enable();
@@ -2587,20 +2671,20 @@ bool Automata::computeStackMatches() {
     if(enabledSTEs.empty()) {
         return true;
     }
-    
+
     Stack<Element *> tmp = enabledSTEs;
     enabledSTEs = Stack<Element *>();
     bool eps = false;
-    
+
     // for each enabled element
     while(!tmp.empty()) {
         // peek at element
         Element *e = tmp.back();
-        
+
         switch(e->getType()) {
         case PDSTATE_T: {
             PDState *pd = dynamic_cast<PDState *>(e);
-            
+
             if(pd->smatch(pdstack.back())) {
                 // check if this is epsilon
                 if(pd->isInputEpsilon()) {
@@ -2618,9 +2702,9 @@ bool Automata::computeStackMatches() {
                     pd->disable();
                     break;
                 }
-                
+
                 enabledSTEs.push_back(e);
-                
+
             } else {
                 // disable the element
                 pd->disable();
@@ -2631,16 +2715,16 @@ bool Automata::computeStackMatches() {
             enabledSTEs.push_back(e);
             break;
         }
-        
+
         // remove the element
         tmp.pop_back();
     }
-    
+
     return !eps;
 }
 
 /**
- * If an STE is enabled and matches on the current input, activate. If the STE is a report STE, record a report in the report vector. 
+ * If an STE is enabled and matches on the current input, activate. If the STE is a report STE, record a report in the report vector.
  */
 void Automata::computeSTEMatches(uint8_t symbol) {
 
@@ -2675,11 +2759,11 @@ void Automata::computeSTEMatches(uint8_t symbol) {
 
         }
 
-        //disable 
+        //disable
         s->disable();
 
         // remove STE from the queue
-        enabledSTEs.pop_back();        
+        enabledSTEs.pop_back();
     }
 }
 
@@ -2691,35 +2775,35 @@ void Automata::computeSTEMatches(uint8_t symbol) {
 void Automata::performStackOperations() {
     Stack<STE*> tmp = activatedSTEs;
     activatedSTEs = Stack<STE*>();
-    
+
     while(!tmp.empty()) {
         // peek the STE
         STE *s = tmp.back();
-        
+
         // we only want to handle PDStates
         switch(s->getType()) {
         case PDSTATE_T: {
             PDState *pd = dynamic_cast<PDState *>(s);
-            
+
             if(pd->getPop()) {
                 // do a stack pop
                 pdstack.pop_back();
             }
-            
+
             if(pd->getPush()) {
                 pdstack.push_back(pd->getPushChar());
             }
-            
+
             break;
         }
         default:
             // do nothing
             break;
         }
-        
+
         // add to our tmp stack
         activatedSTEs.push_back(s);
-        
+
         // remove the STE
         tmp.pop_back();
     }
@@ -2748,9 +2832,9 @@ void Automata::enableSTEMatchingChildren() {
             // don't mark for removal from activated map
             latchedSTEs.push_back(s);
         }
-        
+
     }
-    
+
     // refil activated elements
     while(!latchedSTEs.empty()) {
         activatedSTEs.push_back(latchedSTEs.back());
@@ -2773,10 +2857,10 @@ void Automata::specialElementSimulation() {
     map<uint32_t, bool> queued;
 
     queue<SpecialElement *> work_q;
-    
+
     // initialize tracking structures
     for( auto e : elements) {
-        
+
         // initialize claculated map
         calculated[e.second->getIntId()] = false;
 
@@ -2796,11 +2880,11 @@ void Automata::specialElementSimulation() {
                     queued[specel->getIntId()] = true;
                 }
             }
-            
+
             // indicate that this parent has already calculated
             calculated[e.second->getIntId()] = true;
         }
-    } 
+    }
 
     // while workq is not empty
     while(!work_q.empty()){
@@ -2821,7 +2905,7 @@ void Automata::specialElementSimulation() {
 
         // execute if all our inputs are ready
         if(ready){
-            
+
             // calculate
             calculated[spel->getIntId()] = true;
             bool emitOutput = spel->calculate();
@@ -2833,14 +2917,14 @@ void Automata::specialElementSimulation() {
                 if(!spel->isActivated()){
                     spel->activate();
                 }
-                
+
                 // report?
                 if(report && spel->isReporting()) {
                     reportVector.push_back(make_pair(cycle, spel->getId()));
                 }
-                
+
             }
-            
+
             // disable
             spel->disable();
 
@@ -2853,8 +2937,8 @@ void Automata::specialElementSimulation() {
 
             //// if child is specel
             for(auto e : spel->getOutputSpecelPointers()){
-            
-                ////// push to queue to consider 
+
+                ////// push to queue to consider
                 SpecialElement *spel_child = static_cast<SpecialElement*>(e.first);
                 if(!queued[spel_child->getIntId()]){
                     work_q.push(spel_child);
@@ -2920,12 +3004,12 @@ uint32_t Automata::leftMinimizeChildren(STE * s, int level) {
         STE * node = static_cast<STE*>(e.first);
         if(!node->isMarked()) {
             node->mark();
-            workq.push(node);	
+            workq.push(node);
         }
     }
 
     // merge identical children of next level
-    while(!workq.empty()) { 
+    while(!workq.empty()) {
         STE * first = workq.front();
         workq.pop();
         while(!workq.empty()) {
@@ -2939,7 +3023,7 @@ uint32_t Automata::leftMinimizeChildren(STE * s, int level) {
                 //else push back onto workq
             } else {
                 workq_tmp.push(second);
-            }	 
+            }
         }
 
         outputSTE.push_back(first);
@@ -2986,7 +3070,7 @@ void Automata::leftMinimizeStartStates() {
     }
 
     // Merge start states
-    while(!workq.empty()) { 
+    while(!workq.empty()) {
 
         STE * first = workq.front();
         bitset<256> first_column = first->getBitColumn();
@@ -2995,16 +3079,16 @@ void Automata::leftMinimizeStartStates() {
         while(!workq.empty()) {
             STE * second = workq.front();
             workq.pop();
-            
+
             //if the same, merge and place into second queue
-            if(first_column == second->getBitColumn() && 
-               first->getStart() == second->getStart()){ 
+            if(first_column == second->getBitColumn() &&
+               first->getStart() == second->getStart()){
                 // merge
                 merge_count++;
                 leftMergeSTEs(first, second);
             } else {
                 workq_tmp.push(second);
-            }	 
+            }
         }
 
         while(!workq_tmp.empty()) {
@@ -3151,11 +3235,11 @@ void Automata::printGraphStats() {
             outputs--;
             inputs--;
         }
-        
+
         if(outputs > max_out){
             max_out = outputs;
         }
-        
+
         sum_out += outputs;
 
         if(inputs > max_in){
@@ -3199,10 +3283,10 @@ void Automata::rightMergeSTEs(STE *ste1, STE *ste2){
         //
         if( input_el != NULL) {
 
-            // remove old outputs 
+            // remove old outputs
             input_el->removeOutput(ste2->getId() + port);
             input_el->removeOutputPointer(make_pair(ste2, ste2->getId() + port));
-        
+
             // add new outputs if it doesn't exist already
             // NOT SURE WHY THIS IS NECESSARY
             // note: removing before adding is a way to guarantee there is only one copy
@@ -3223,24 +3307,24 @@ void Automata::rightMergeSTEs(STE *ste1, STE *ste2){
  * Guarantees that the fan-in for every node does not exceed fanin_max.
  */
 void Automata::enforceFanIn(uint32_t fanin_max){
-    
-    // BFS queue of elements to process 
+
+    // BFS queue of elements to process
     queue<STE*> workq;
 
     // unmark all elements
     unmarkAllElements();
-    
+
     // push all start states to workq
-    for(auto el : getElements()){ 
+    for(auto el : getElements()){
 
         // ignore special elements
         if(el.second->isSpecialElement()){
             continue;
         }
-        
+
         STE * s = static_cast<STE*>(el.second);
 
-        // push start states to workq    
+        // push start states to workq
         if(s->isStart()){
             // mark node
             s->mark();
@@ -3251,7 +3335,7 @@ void Automata::enforceFanIn(uint32_t fanin_max){
 
     // look for elements with fanins that violate fanin_max
     while(!workq.empty()){
-       
+
         // get node to work on
         STE * s = workq.front();
         workq.pop();
@@ -3277,7 +3361,7 @@ void Automata::enforceFanIn(uint32_t fanin_max){
                 child->mark();
             }
         }
-        
+
         //
         //cout << "FAN IN: " << fanin << endl;
         if(fanin > fanin_max){
@@ -3293,12 +3377,12 @@ void Automata::enforceFanIn(uint32_t fanin_max){
                 if(e.first.compare(s->getId()) != 0)
                     old_inputs.push(e.first);
             }
-            
+
             // create new nodes
             for(uint32_t i = 0; i < new_nodes; i++){
-                
+
                 string id = s->getId() + "_" + to_string(i);
-                
+
                 STE *new_node = new STE(id,
                                         s->getSymbolSet(),
                                         s->getStringStart());
@@ -3307,10 +3391,10 @@ void Automata::enforceFanIn(uint32_t fanin_max){
                     new_node->setReporting(true);
                     new_node->setReportCode(s->getReportCode());
                 }
-                
+
                 // add to automata
                 rawAddSTE(new_node);
-                
+
                 // mark the node in case there are loops
                 new_node->mark();
 
@@ -3326,7 +3410,7 @@ void Automata::enforceFanIn(uint32_t fanin_max){
                             workq.push(static_cast<STE*>(to));
                     }
                 }
-                   
+
                 // add a portion of the inputs to new node
                 uint32_t input_counter = 0;
                 while(input_counter < fanin_max && !old_inputs.empty()){
@@ -3343,7 +3427,7 @@ void Automata::enforceFanIn(uint32_t fanin_max){
                     addEdge(new_node, new_node);
                 }
             }
-            
+
             // delete old node
             removeElement(s);
         }
@@ -3355,21 +3439,21 @@ void Automata::enforceFanIn(uint32_t fanin_max){
  */
 void Automata::enforceFanOut(uint32_t fanout_max){
 
-    // BFS queue of elements to process 
+    // BFS queue of elements to process
     queue<STE*> workq;
 
     // unmark all elements
     unmarkAllElements();
-    
+
     // push report states to workq
-    for(auto el : getElements()){ 
+    for(auto el : getElements()){
 
         if(el.second->isSpecialElement()){
             continue;
         }
         STE * s = static_cast<STE*>(el.second);
 
-        // push report states to workq    
+        // push report states to workq
         if(s->isReporting()){
             // mark node
             s->mark();
@@ -3380,7 +3464,7 @@ void Automata::enforceFanOut(uint32_t fanout_max){
 
     // look for elements with fanouts that violate fanout_max
     while(!workq.empty()){
-       
+
         // get node to work on
         STE * s = workq.front();
         workq.pop();
@@ -3409,15 +3493,15 @@ void Automata::enforceFanOut(uint32_t fanout_max){
                 fanout++;
             }
         }
-       
+
         //
         // if fanout violates bound
         if(fanout > fanout_max){
-            
+
             // adjust node
             // figure out how many new nodes we'll need
             uint32_t new_nodes = ceil((double)fanout / (double)fanout_max);
-            
+
             //add all outputs from node to queue
             // except self refs
             queue<string> old_outputs;
@@ -3425,12 +3509,12 @@ void Automata::enforceFanOut(uint32_t fanout_max){
                 if(out.compare(s->getId()) != 0)
                     old_outputs.push(out);
             }
-            
+
             // create new nodes
             for(uint32_t i = 0; i < new_nodes; i++){
-                
+
                 string id = s->getId() + "_" + to_string(i);
-                
+
                 STE *new_node = new STE(id,
                                         s->getSymbolSet(),
                                         s->getStringStart());
@@ -3439,10 +3523,10 @@ void Automata::enforceFanOut(uint32_t fanout_max){
                     new_node->setReporting(true);
                     new_node->setReportCode(s->getReportCode());
                 }
-                
+
                 // add to automata
                 rawAddSTE(new_node);
-                
+
                 // mark the node in case there are loops
                 new_node->mark();
 
@@ -3464,7 +3548,7 @@ void Automata::enforceFanOut(uint32_t fanout_max){
                         }
                     }
                 }
-                
+
                 // add a portion of the outputs to new node
                 uint32_t output_counter = 0;
                 while(output_counter < fanout_max && !old_outputs.empty()){
@@ -3480,9 +3564,9 @@ void Automata::enforceFanOut(uint32_t fanout_max){
                 if(selfref){
                     //
                     addEdge(new_node, new_node);
-                }                
+                }
             }
-            
+
             // delete old node
             removeElement(s);
         }
@@ -3516,7 +3600,8 @@ void Automata::dumpSTEState(string filename) {
         temp.pop();
     }
 
-    writeStringToFile(s, filename);
+    cout << s << endl;
+    //writeStringToFile(s, filename);
 }
 
 /**
@@ -3532,7 +3617,7 @@ void Automata::dumpSpecelState(string filename) {
 
         if(e.second->isSpecialElement()){
             SpecialElement * specel = static_cast<SpecialElement*>(e.second);
-           
+
             // if counter, print ID and target
             if(dynamic_cast<Counter*>(specel)){
                 s += specel->getId();
@@ -3565,7 +3650,7 @@ void Automata::removeEdge(Element* from, Element *to) {
 }
 
 /**
- * Removes a directed edge between two elements. Either string input can define a connection to a specific Element port using the form "ElementID:port". 
+ * Removes a directed edge between two elements. Either string input can define a connection to a specific Element port using the form "ElementID:port".
  */
 void Automata::removeEdge(string from_str, string to_str) {
 
@@ -3581,7 +3666,7 @@ void Automata::removeEdge(string from_str, string to_str) {
         to_port = from_port;
         to_str += to_port;
     }
-    
+
     // remove outputs from parent
     from->removeOutput(to_str);
     from->removeOutputPointer(make_pair(to, to_port));
@@ -3604,7 +3689,7 @@ void Automata::addEdge(Element* from, Element *to){
 }
 
 /**
- * Adds a directed edge between two elements. Either string input can define a connection to a specific Element port using the form "ElementID:port". 
+ * Adds a directed edge between two elements. Either string input can define a connection to a specific Element port using the form "ElementID:port".
  */
 void Automata::addEdge(string from_str, string to_str) {
 
@@ -3625,7 +3710,7 @@ void Automata::addEdge(string from_str, string to_str) {
     from->addOutput(to_str);
     // output pointers are paired with their ports
     from->addOutputPointer(make_pair(to, to_port));
-    
+
     // add proper input to child as "fromId:toport
     to->addInput(from->getId() + to_port);
 }
@@ -3666,7 +3751,7 @@ void Automata::updateElementId(Element *el, string newId) {
 
     // Re-insert element into proper automata data structures
     validateElement(el);
-    
+
     // add back in all child edges
     for(string child : children){
         addEdge(el->getId(), child);
@@ -3689,11 +3774,11 @@ void Automata::validateStartElement(Element* el){
         return;
 
     STE *ste = static_cast<STE*>(el);
-    
+
     if(ste->isStart()){
         // make sure we're in the array
         bool contains = (find(starts.begin(), starts.end(), ste) != starts.end());
-        
+
         if(!contains){
             starts.push_back(ste);
         }
@@ -3703,11 +3788,11 @@ void Automata::validateStartElement(Element* el){
         // make sure we're not in the array
         auto iter = find(starts.begin(), starts.end(), ste);
         bool contains = (iter != starts.end());
-        
+
         if(contains){
             starts.erase(iter);
         }
-    } 
+    }
 }
 
 /**
@@ -3718,7 +3803,7 @@ void Automata::validateReportElement(Element* el){
     if(el->isReporting()){
         // make sure we're in the array
         bool contains = (find(reports.begin(), reports.end(), el) != reports.end());
-        
+
         if(!contains){
             reports.push_back(el);
         }
@@ -3728,7 +3813,7 @@ void Automata::validateReportElement(Element* el){
         // make sure we're not in the array
         auto iter = find(reports.begin(), reports.end(), el);
         bool contains = (iter != reports.end());
-        
+
         if(contains){
             reports.erase(iter);
         }
@@ -3741,10 +3826,10 @@ void Automata::validateReportElement(Element* el){
 void Automata::validateElement(Element* el) {
 
     elements[el->getId()] = el;
-    
+
     // make sure we're in the start array if we're a start and vice versa
     validateStartElement(el);
-    
+
     // if we're a report, make sure we're in the report array
     validateReportElement(el);
 
@@ -3807,18 +3892,18 @@ void Automata::eliminateDeadStates() {
 
         // unmark all elements
         unmarkAllElements();
-        
+
         Element *el = e.second;
 
         // Can we reach a report state from el?
         bool report_unreachable = true;
-        
+
         // are we a report state?
         if(el->isReporting()) {
             el->mark();
             report_unreachable = false;
         }
-        
+
         queue<Element *> workq;
         // push outputs to workq
         for(string out : el->getOutputs()){
@@ -3839,13 +3924,13 @@ void Automata::eliminateDeadStates() {
 
             Element *child = workq.front();
             workq.pop();
-            
+
             for(string out : child->getOutputs()){
                 Element *output = getElement(out);
                 if(output->isReporting()) {
                     report_unreachable = false;
                 }
-                
+
                 // push to queue
                 if(!output->isMarked()) {
                     output->mark();
@@ -3878,9 +3963,9 @@ void Automata::eliminateDeadStates() {
     for(STE *el : getStarts()){
 
         el->mark();
-        
+
         queue<Element *> workq;
-        
+
         // push outputs to workq
         for(string out : el->getOutputs()){
             Element *output = getElement(out);
@@ -3897,10 +3982,10 @@ void Automata::eliminateDeadStates() {
 
             Element *child = workq.front();
             workq.pop();
-            
+
             for(string out : child->getOutputs()){
                 Element *output = getElement(out);
-                
+
                 // push to queue
                 if(!output->isMarked()) {
                     output->mark();
@@ -3918,7 +4003,7 @@ void Automata::eliminateDeadStates() {
             toRemove.push(e.second);
         }
     }
-    
+
     // remove all unmarked elements
     while(!toRemove.empty()){
         Element *el = toRemove.front();

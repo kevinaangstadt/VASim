@@ -25,7 +25,7 @@ CXXFLAGS += $(OPTS)
 #CXXFLAGS += -g
 
 _DEPS = *.h
-_OBJ = errors.o util.o ste.o pdstate.o ANMLParser.o MNRLAdapter.o automata.o element.o specialElement.o gate.o and.o or.o nor.o counter.o inverter.o 
+_OBJ = errors.o util.o ste.o pdstate.o ANMLParser.o MNRLAdapter.o automata.o element.o specialElement.o gate.o and.o or.o nor.o counter.o inverter.o
 
 MAIN_CPP = main.cpp
 
@@ -35,34 +35,42 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 #
-all: submodule_init vasim_release
+all: submodule_init vasim_release tools
 
 vasim_release: mnrl pugi
 	$(info  )
 	$(info Compiling VASim Library...)
 	$(MAKE) $(TARGET)
 
-mnrl:	
+mnrl:
 	$(info  )
 	$(info Compiling MNRL Library...)
 	$(MAKE) $(LIBMNRL)
 
-pugi:	
+pugi:
 	$(info )
 	$(info Compiling PugiXML Library...)
 	$(MAKE) $(LIBPUGI)
 
+tools: print_cycles
+
+print_cycles: src/print_cycles.cpp $(LIBVASIM) $(LIBMNRL)
+	$(info )
+	$(info Compiling print_cycles...)
+	$(CC) $(CXXFLAGS) $^ -o $@
+
+
 $(TARGET): $(SRCDIR)/$(MAIN_CPP) $(LIBVASIM) $(LIBMNRL)
 	$(info  )
 	$(info Compiling VASim executable...)
-	$(CC) $(CXXFLAGS) $^ -o $@  
+	$(CC) $(CXXFLAGS) $^ -o $@
 
 $(LIBVASIM): $(LIBPUGI) $(OBJ)
-	$(AR) $(ARFLAGS) $@ $^ 
+	$(AR) $(ARFLAGS) $@ $^
 
 $(ODIR)/%.o: $(SRCDIR)/%.cpp $(DEPS) $(LIBMNRL)
-	@mkdir -p $(ODIR)	
-	$(CC) $(CXXFLAGS) -c -o $@ $< 
+	@mkdir -p $(ODIR)
+	$(CC) $(CXXFLAGS) -c -o $@ $<
 
 $(LIBMNRL):
 	$(MAKE) -C $(MNRL)
@@ -87,4 +95,4 @@ cleanpugi:
 submodule_init:
 	@git submodule update --init --recursive
 
-.PHONY: clean cleanvasim cleanmnrl cleanpugi vasim_release mnrl pugi submodule_init
+.PHONY: clean cleanvasim cleanmnrl cleanpugi vasim_release mnrl pugi submodule_init tools

@@ -9,8 +9,8 @@ using namespace std;
 /*
  *
  */
-Element::Element(string id) : id(id), 
-                              reporting(false), 
+Element::Element(string id) : id(id),
+                              reporting(false),
                               activated(false),
                               enabled(false),
                               marked(false),
@@ -46,7 +46,7 @@ Element::~Element(){
  *
  */
 bool Element::setId(string s) {
-    
+
     id = s;
 
     return true;
@@ -67,7 +67,7 @@ bool Element::setIntId(uint32_t i) {
  *
  */
 bool Element::setReporting(bool b) {
-    
+
     reporting = b;
 
     return true;
@@ -108,7 +108,7 @@ void Element::activate() {
 }
 
 /**
- * 
+ *
  */
 bool Element::deactivate() {
 
@@ -117,7 +117,7 @@ bool Element::deactivate() {
 }
 
 /**
- * 
+ *
  */
 void Element::setEod(bool isEod) {
     eod = isEod;
@@ -182,7 +182,7 @@ bool Element::addOutputPointer(pair<Element *, string> el) {
             if(e.first == el.first)
                 return false;
         }
-        
+
         outputSpecelPointers.push_back(el);
     }else{
         // check if it already exists
@@ -190,7 +190,7 @@ bool Element::addOutputPointer(pair<Element *, string> el) {
             if(e.first == el.first)
                 return false;
         }
-        
+
         outputSTEPointers.push_back(el);
     }
     return true;
@@ -200,7 +200,7 @@ bool Element::addOutputPointer(pair<Element *, string> el) {
  *
  */
 bool Element::addOutputExisting(string s, map<string, Element *> elements) {
-    
+
     addOutput(s);
     pair<Element *, string> p(elements[s], s);
     addOutputPointer(p);
@@ -258,14 +258,14 @@ bool Element::removeOutputPointer(pair<Element *,string> p) {
                 // DOESNT WORK... WHY? TODO THIS IS A BUG IN HOW WE STORE PORTS
                 /*
                   if(el.second.compare(p.second) == 0){
-                  
+
                   }
                 */
             }
             position++;
         }
-        
-        if(found){     
+
+        if(found){
             outputSpecelPointers.at(position) = outputSpecelPointers.back();
             outputSpecelPointers.pop_back();
         }
@@ -277,19 +277,19 @@ bool Element::removeOutputPointer(pair<Element *,string> p) {
                 // DOESNT WORK... WHY? TODO THIS IS A BUG IN HOW WE STORE PORTS
                 /*
                   if(el.second.compare(p.second) == 0){
-                  
+
                   }
                 */
             }
             position++;
         }
-        
-        if(found){     
+
+        if(found){
             outputSTEPointers.at(position) = outputSTEPointers.back();
             outputSTEPointers.pop_back();
         }
     }
-    
+
     return found;
 }
 
@@ -315,7 +315,7 @@ bool Element::clearInputs() {
  *
  */
 bool Element::addInput(string s) {
-    
+
     inputs[s] = false;
     return true;
 }
@@ -393,11 +393,11 @@ void Element::enableChildSTEs(Stack<Element*> *enabledSTEs) {
     for(const pair<Element *, string> e : outputSTEPointers) {
 
         Element * child = e.first;
-        
+
         // only enable if not previously enabled
         if(!child->isEnabled()){
             enabledSTEs->push_back(child);
-            static_cast<STE *>(child)->enable();        
+            static_cast<STE *>(child)->enable();
         }
     }
 }
@@ -406,12 +406,12 @@ void Element::enableChildSTEs(Stack<Element*> *enabledSTEs) {
  * Returns the number of specels enabled
  */
 uint32_t Element::enableChildSpecialElements(queue<Element *> *enabledSpecialEls) {
-    
+
     uint32_t numEnabledSpecEls = 0;
 
     for(auto e : outputSpecelPointers) {
         Element * child = e.first;
-        
+
         // consider all special elements
         numEnabledSpecEls++;
 
@@ -446,7 +446,7 @@ void Element::unmark() {
     marked = false;
 }
 
-    
+
 /*
  *
  */
@@ -469,7 +469,7 @@ bool Element::isStateful(){
 bool Element::isSelfRef(){
 
     bool selfref = false;
-    
+
     for(auto input : getInputs()){
         if(input.first.compare(getId()) == 0)
             selfref = true;

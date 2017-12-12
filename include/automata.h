@@ -41,16 +41,16 @@ private:
     bool dump_state;
     bool endOfData;
     uint32_t dump_state_cycle;
-    
+
     // our DPDA stack
     Stack<uint8_t> pdstack;
-    
+
     std::unordered_map<std::string, Element*> elements;
     std::vector<STE*> starts;
     std::vector<Element*> reports;
     std::unordered_map<std::string, SpecialElement*> specialElements;
     std::unordered_map<std::string, SpecialElement*> firstLayerSpecialElements;
-    
+
     // Functional element stacks
     Stack<Element *> enabledSTEs;
     Stack<STE*> activatedSTEs;
@@ -64,7 +64,7 @@ private:
     // Simulation Statistics
     std::vector<std::pair<uint64_t, std::string>> reportVector;
     std::unordered_map<uint32_t, std::list<std::string>> activationVector;
-    std::unordered_map<std::string, uint32_t> activationHist;    
+    std::unordered_map<std::string, uint32_t> activationHist;
     std::vector<uint32_t> enabledHist;
     std::vector<uint32_t> activatedHist;
     uint32_t maxActivations;
@@ -76,10 +76,10 @@ private:
 
     // Misc
     vasim_err_t error;
-    
+
     //
     uint64_t cycle;
-    
+
 public:
 
     // Constructors
@@ -88,7 +88,7 @@ public:
     Automata(std::string fn, std::string filetype);
     void parseAutomataFile(std::string fn, std::string filetype);
     void finalizeAutomata();
-    
+
     // Get/set
     std::vector<STE *> &getStarts();
     std::vector<Element *> &getReports();
@@ -106,7 +106,7 @@ public:
     void setErrorCode(vasim_err_t err);
     vasim_err_t getErrorCode();
     void unmarkAllElements();
-    
+
     // I/O
     void print();
     void writeReportToFile(std::string fn);
@@ -124,6 +124,7 @@ public:
     void initializeSimulation();
     void simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, uint64_t end_index);
     bool simulate(uint8_t);
+    bool simulate();
     bool simulate(uint8_t, std::vector<std::string> injects);
     void reset();
     void enableStartStates(bool enableStartOfData); // formerly stageOne
