@@ -13,13 +13,17 @@ void printElements(queue<Element *> q) {
   }
 }
 
-void printCycle(uint64_t i, queue<Element *> en, queue<Element *> ac) {
+void printCycle(uint64_t i, queue<Element *> en, queue<Element *> ac, queue<Element *> r) {
   cout << "==================================" << endl <<
     "cycle:" << i << endl;
 
   cout << "activated:" << endl;
 
   printElements(ac);
+
+  cout << "reported: " << endl;
+
+  printElements(r);
 
   cout << "enabled for next cycle:" << endl;
 
@@ -86,15 +90,15 @@ int main(int argc, char* argv[]) {
   uint64_t i;
   for(i = 0; i < length; i++) {
     while(!ap.simulate(inputs[i])) {
-      printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle());
+      printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
     }
 
-    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle());
+    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
 
   }
 
   while(ap.getEnabledLastCycle().size() > 0 && !ap.simulate()) {
-    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle());
+    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
   }
 
   free(inputs);
