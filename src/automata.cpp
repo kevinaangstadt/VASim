@@ -897,6 +897,7 @@ bool Automata::simulate() {
       profileEnables();
   }
 
+  tock();
   return false;
 }
 
@@ -1134,6 +1135,7 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
         cout << "  Progress: " << length << " / " << length << "\r";
         flush(cout);
         cout << endl;
+        cout << "  Total Clock: " << clock << " cycles" << endl;
     }
 
     if(profile) {
@@ -2957,6 +2959,14 @@ void Automata::specialElementSimulation() {
 uint64_t Automata::tick() {
 
     return cycle++;
+}
+
+/**
+ * Tock advances the clock count representing the number of clock cycles run_sum
+ * @return the total number of clock cycles so far
+ */
+uint64_t Automata::tock() {
+  return clock++;
 }
 
 /**

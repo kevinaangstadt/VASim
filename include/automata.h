@@ -79,6 +79,7 @@ private:
 
     //
     uint64_t cycle;
+    uint64_t clock;
 
 public:
 
@@ -134,6 +135,7 @@ public:
     void enableSTEMatchingChildren(); // formerly stageThree
     void specialElementSimulation(); // formerly stageFour/Five
     uint64_t tick();
+    uint64_t tock();
 
 
     // Statistics and Profiling
