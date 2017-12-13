@@ -21,7 +21,7 @@ PDState::PDState(string id,
         stack_column.set(i,0);
     }
 
-    parseSymbolSet(stack_column, stack_set);    
+    parseSymbolSet(stack_column, stack_set);
 }
 
 PDState::~PDState() {}
@@ -33,3 +33,5 @@ bool PDState::getPop() { return pop; }
 uint8_t PDState::getPushChar() { return push_char; }
 
 bool PDState::isInputEpsilon() { return eps; }
+
+bool PDState::doesPeek() { return stack_column.count() != 256;  }

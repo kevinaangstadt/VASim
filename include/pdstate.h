@@ -9,7 +9,7 @@
 
 class PDState : public STE {
 
-public:    
+public:
     PDState(std::string id,
             std::string symbol_set,
             std::string stack_set,
@@ -19,29 +19,30 @@ public:
             bool eps,
             std::string start);
     ~PDState();
-    
+
     virtual ElementType getType();
-    
+
     inline bool smatch(uint8_t top) {
         return stack_column.test(top);
     };
-    
+
     bool getPush();
     bool getPop();
     uint8_t getPushChar();
-    
+
     bool isInputEpsilon();
+    bool doesPeek();
 
 protected:
     std::string stack_set;
     uint8_t push_char;
-    
+
     std::bitset<256> stack_column;
-    
+
     bool push;
     bool pop;
     bool eps;
-    
+
 };
 
 #endif
