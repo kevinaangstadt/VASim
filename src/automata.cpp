@@ -155,6 +155,7 @@ void Automata::reset() {
     enabledHist.clear();
     activatedHist.clear();
     maxActivations = 0;
+    maxStackSize = 0;
     enabledCount.clear();
     activatedCount.clear();
 
@@ -745,6 +746,14 @@ uint32_t Automata::getMaxActivations() {
 }
 
 /**
+ * Get the profiled stack size
+ * @return the maximum stack size
+ */
+uint32_t Automata::getMaxStackSize() {
+  return maxStackSize;
+}
+
+/**
  * Enables automata profiling during automata simulation.
  */
 void Automata::enableProfile() {
@@ -993,6 +1002,9 @@ bool Automata::simulate(uint8_t symbol) {
         tick();
         return true;
     }
+
+    tock();
+
     return false;
 }
 
@@ -1152,6 +1164,8 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
         for(uint32_t acts : activatedHist){
             sum += (uint64_t)acts;
         }
+
+        cout << "  Maximum Stack Size: " << maxStackSize << endl;
 
         // cal distribution
 
@@ -2808,6 +2822,11 @@ void Automata::performStackOperations() {
 
         // remove the STE
         tmp.pop_back();
+
+        if(profile) {
+          maxStackSize = max(maxStackSize, pdstack.size());
+        }
+
     }
 }
 
@@ -3261,6 +3280,50 @@ void Automata::printGraphStats() {
     cout << "  Max Fan-in (not including self loops): " << max_in << endl;
     cout << "  Max Fan-out (not including self loops): " << max_out << endl;
     cout << "  Average Node Degree: " << (double)sum_out / (double)elements.size() << endl << endl;
+
+
+    // special stats for DPDAs
+
+    uint64_t total_push = 0;
+    uint64_t total_peek = 0;
+    uint64_t total_pop = 0;
+    uint64_t total_eps = 0;
+
+    for(auto el : elements) {
+      switch(el.second->getType()) {
+        case PDSTATE_T: {
+          // We only care about pdstates
+          PDState *s = dynamic_cast<PDState *>(el.second);
+
+          if(s->getPush()) {
+            total_push++;
+          }
+
+          if(s->doesPeek()) {
+            total_peek++;
+          }
+
+          if(s->getPop()) {
+            total_pop++;
+          }
+
+          if(s->isInputEpsilon()) {
+            total_eps++;
+          }
+
+          break;
+        }
+        default:
+          continue;
+      }
+    }
+
+    cout << "DPDA Statistics" << endl;
+    cout << "  Number of PDStates with PUSH: " << total_push << endl;
+    cout << "  Number of PDStates with PEEK: " << total_peek << endl;
+    cout << "  Number of PDStates with POP: " << total_pop << endl;
+    cout << "  Number of PDStates with input comparison: " << elements.size() - specialElements.size() - total_eps << endl; 
+    cout << "  Number of PDStates with EPSILON: " << total_eps << endl;
 
 }
 

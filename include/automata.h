@@ -68,6 +68,7 @@ private:
     std::vector<uint32_t> enabledHist;
     std::vector<uint32_t> activatedHist;
     uint32_t maxActivations;
+    uint32_t maxStackSize = 0;
     std::unordered_map<Element*, uint32_t> enabledCount;
     std::unordered_map<Element*, uint32_t> activatedCount;
     std::queue<Element *> enabledLastCycle;
@@ -98,6 +99,7 @@ public:
     std::unordered_map<std::string, uint32_t> &getActivationHist();
     std::vector<std::pair<uint64_t, std::string>> &getReportVector();
     uint32_t getMaxActivations();
+    uint32_t getMaxStackSize();
     void enableProfile();
     void enableReport();
     void enableQuiet();
