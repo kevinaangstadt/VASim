@@ -26,6 +26,7 @@ Automata::Automata() {
 
     // Initialize cycle to start at 0
     cycle = 0;
+    clock = 0;
 
     // End of data is false until last cycle
     endOfData = false;
@@ -1000,6 +1001,7 @@ bool Automata::simulate(uint8_t symbol) {
     if(not_eps) {
         // advance cycle count
         tick();
+        tock();
         return true;
     }
 

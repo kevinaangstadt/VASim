@@ -109,6 +109,7 @@ public:
     void setErrorCode(vasim_err_t err);
     vasim_err_t getErrorCode();
     void unmarkAllElements();
+    uint64_t getClock() { return clock; }
 
     // I/O
     void print();
