@@ -13,7 +13,7 @@ void printElements(queue<Element *> q) {
   }
 }
 
-void printCycle(uint64_t i, queue<Element *> en, queue<Element *> ac, queue<Element *> r) {
+void printCycle(uint64_t i, queue<Element *> en, queue<Element *> ac, queue<Element *> r, const deque<uint8_t> &s) {
   cout << "==================================" << endl <<
     "cycle:" << i << endl;
 
@@ -28,8 +28,13 @@ void printCycle(uint64_t i, queue<Element *> en, queue<Element *> ac, queue<Elem
   cout << "enabled for next cycle:" << endl;
 
   printElements(en);
-
-
+  
+  cout << "stack: ";
+  
+  for(auto &i : s) {
+    cout << (int) i << " ";
+  }
+  cout << endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -90,15 +95,15 @@ int main(int argc, char* argv[]) {
   uint64_t i;
   for(i = 0; i < length; i++) {
     while(!ap.simulate(inputs[i])) {
-      printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
+      printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle(), ap.getPDStack());
     }
 
-    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
+    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle(), ap.getPDStack());
 
   }
 
   while(ap.getEnabledLastCycle().size() > 0 && !ap.simulate()) {
-    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle());
+    printCycle(i, ap.getEnabledLastCycle(), ap.getActivatedLastCycle(), ap.getReportedLastCycle(), ap.getPDStack());
   }
 
   free(inputs);
