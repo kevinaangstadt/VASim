@@ -107,7 +107,6 @@ string STE::getStringStart() {
     }else{
         return "none";
     }
-
 }
 
 /*
@@ -213,13 +212,7 @@ string STE::toString() {
     s.append(" symbol-set=");
     s.append(symbol_set);
     s.append(" start=");
-    if(start == ALL_INPUT){
-        s.append("all-input");
-    }else if( start == START_OF_DATA) {
-        s.append("start-of-data");
-    } else {
-        s.append("none");
-    }
+    s.append(getStringStart());
         
     s.append("\n\t");
     s.append("activate-on-match=\n\t  ");
@@ -262,13 +255,7 @@ string STE::toANML() {
     s.append(symbol_set);
     s.append("\" ");
     s.append(" start=\"");
-    if(start == ALL_INPUT){
-        s.append("all-input");
-    }else if( start == START_OF_DATA) {
-        s.append("start-of-data");
-    } else {
-        s.append("none");
-    }
+    s.append(getStringStart());
     s.append("\">\n");
 
     if(reporting){
@@ -374,7 +361,9 @@ bool STE::addSymbolToSymbolSet(uint32_t symbol) {
 
 
 /**
- * Implements compare for STEs (greater than)
+ * Compare compares this STE to the input STE and returns 0 (equal)
+ *   if the two STEs are "left identical". This means that they are
+ *   redundant in the direction of computation and can be merged.
  */
 int STE::compare(STE *other) {
 
@@ -426,8 +415,8 @@ int STE::compare(STE *other) {
         if(debug_out)
             cout << "report mismatch2" << endl;
         return -1;
-        //never merge reports
     }
+    
     // never merge two reports
     // NOTE: this is *not* the behavior of the micron compiler TODO
     else if(isReporting() || other->isReporting()){
@@ -628,4 +617,66 @@ void STE::sanitizeSymbolSet() {
     // "
     find_and_replace(symbol_set, "\'", "\\x27");
 
+}
+
+bool STE::identicalProperties(STE *other) {
+
+    // check bit vector
+    bitset<256> other_column = other->getBitColumn();
+    if(other_column != getBitColumn()) {
+        return false;
+    }
+
+    // check start
+    if(getStart() != other->getStart()) {
+        return false;
+    }
+
+    // check report
+    if(isReporting() != other->isReporting()) {
+        return false;
+    }else if(isReporting() && other->isReporting()) {
+        // report elements are not considered equal
+        return false;
+    }
+
+    // identical STE properties!
+    return true;
+}
+
+/**
+ * Left compare compares this STE to the input STE and returns true
+ *   if the two STEs are "left identical". This means that they are
+ *   redundant in the direction of computation and can be left merged.
+ */
+bool STE::leftCompare(STE *other) {
+
+    // Check all node-level STE properties
+    if(!identicalProperties(other))
+       return false;
+    
+    // check if inputs are identical
+    if(!identicalInputs(other))
+        return false;
+
+    return true;
+}
+
+
+/**
+ * Right compare compares this STE to the input STE and returns 0 (equal)
+ *   if the two STEs are "right identical". This means that they are
+ *   redundant opposite the direction of computation and can be right merged.
+ */
+bool STE::rightCompare(STE *other) {
+
+    // Check all node-level STE properties
+    if(!identicalProperties(other))
+       return false;
+    
+    // check if outputs are identical
+    if(!identicalOutputs(other))
+        return false;
+
+    return true;
 }

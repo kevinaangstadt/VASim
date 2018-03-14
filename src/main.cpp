@@ -37,9 +37,9 @@ void usage(char * argv) {
     printf("      --graph               Output automata as .graph file for HyperScan.\n");
 
     printf("\n OPTIMIZATIONS:\n");    
-    printf("  -O, --left-min-before     Enable left minimization before connected component search\n");
-    printf("  -L, --left-min-after      Enable left minimization after within connected components\n");
-    printf("  -x, --remove_ors          Remove all OR gates\n");
+    printf("  -O, --optimize-global     Run all optimizations on all automata subgraphs.\n");
+    printf("  -L, --optimize-logal      Run all optimizations on automata subgraphs after partitioned among parallel threads.\n");
+    printf("  -x, --remove_ors          Remove all OR gates. Only applied globally.\n");
 
     printf("\n TRANSFORMATIONS:\n");
     printf("      --enforce-fanin=<int> Enforces a fan-in limit, replicating nodes until no node has a fan-in of larger than <int>.\n");
@@ -54,102 +54,11 @@ void usage(char * argv) {
     printf("\n");
 }
 
-uint32_t fileSize(string fn) {
-
-    // open the file:
-    std::ifstream file(fn, ios::binary);
-
-    // Stop eating new lines in binary mode!!!
-    file.unsetf(std::ios::skipws);
-
-    // get its size:
-    std::streampos fileSize;
-
-    file.seekg(0, ios::end);
-    fileSize = file.tellg();
-    file.seekg(0, ios::beg);
-
-    return fileSize;
-}
-void inputFileCheck() { 
-    if(errno == ENOENT) {
-        cout<< "VAsim Error: no such input file." << endl;
-        exit(-1);
-    }	
-}
-vector<unsigned char> file2CharVector(string fn) {
-
-    // open the file:
-    std::ifstream file(fn, ios::binary);
-    if(file.fail()){
-        inputFileCheck();
-    }
-
-    // get its size:
-    std::streampos fileSize;
-
-    file.seekg(0, ios::end);
-    fileSize = file.tellg();
-    file.seekg(0, ios::beg);
-
-    // Stop eating new lines in binary mode!!!
-    file.unsetf(std::ios::skipws);
-
-    // reserve capacity
-    std::vector<unsigned char> vec;
-    vec.reserve(fileSize);
-
-    // read the data:
-    vec.insert(vec.begin(),
-               std::istream_iterator<unsigned char>(file),
-               std::istream_iterator<unsigned char>());
-
-    return vec;
-
-}
-
 /*
  *
  */
 void simulateAutomaton(Automata *a, uint8_t *input, uint64_t start_index, uint64_t sim_length, uint64_t total_length) {
     a->simulate(input, start_index, sim_length, total_length);
-}
-
-/*
- * Returns the input stream byte array, stores length in size pointer input
- */
-uint8_t * parseInputStream(bool simulate, bool input_string, uint64_t *size, char ** argv, uint32_t optind) {
-
-    uint8_t * input;
-    
-    if(simulate){
-        // From command line
-        if(input_string){
-            string input2 = argv[optind];
-            *size = (uint64_t)input2.length();
-            uint64_t counter = 0;
-            input = (uint8_t*)malloc(sizeof(uint8_t) * *size);
-            // copy bytes to unsigned ints
-            for(unsigned char val : input2){
-                input[counter] = (uint8_t)val;
-                counter++;
-            }
-            // From file
-        } else {
-            string input_fn = argv[optind];
-            vector<unsigned char> input2 = file2CharVector(input_fn);
-            *size = input2.size();
-            input = (uint8_t*)malloc(sizeof(uint8_t) * input2.size());
-            // copy bytes to unsigned ints
-            uint64_t counter = 0;
-            for(uint8_t val : input2){
-                input[counter] = (uint8_t)val;
-                counter++;
-            }
-        }
-    }
-
-    return input;
 }
 
 /*
@@ -168,14 +77,19 @@ int main(int argc, char * argv[]) {
     bool to_anml = false;
     bool to_mnrl = false;
     bool time = false;
-    bool optimize = false;
-    bool optimize_after = false;
+    bool optimize_global = false;
+    bool prefix_merge_global = false;
+    bool prefix_merge_local = false;
+    bool suffix_merge_global = false;
+    bool suffix_merge_local = false;
+    bool common_path_merge_global = false;
+    bool common_path_merge_local = false;
+    bool optimize_local = false;
     bool remove_ors = false;
     bool to_nfa = false;
     bool to_dfa = false;
     bool to_hdl = false;
     bool to_blif = false;
-    uint32_t max_level = 10000; // artificial (and arbitrary) max depth of attempted left-minimization
     uint32_t num_threads = 1;
     uint32_t num_threads_packets = 1;
     bool to_graph = false;
@@ -191,7 +105,7 @@ int main(int argc, char * argv[]) {
     const int32_t dump_state_switch = 1003;
 
     int c;
-    const char * short_opt = "thsqrbnfcdBDeamxipOLl:T:P:";
+    const char * short_opt = "thsqrbnfcdBDeamxipOLT:P:";
 
     struct option long_opt[] = {
         {"help",          no_argument, NULL, 'h'},
@@ -209,10 +123,9 @@ int main(int argc, char * argv[]) {
         {"profile",         no_argument, NULL, 'p'},
         {"charset",         no_argument, NULL, 'c'},
         {"time",         no_argument, NULL, 't'},
-        {"left-min-before",         no_argument, NULL, 'O'},
-        {"left-min-after",         no_argument, NULL, 'L'},
+        {"optimize-global",         no_argument, NULL, 'O'},
+        {"optimize-local",         no_argument, NULL, 'L'},
         {"remove-ors",         no_argument, NULL, 'x'},
-        {"level",         required_argument, NULL, 'l'},
         {"thread-width",         required_argument, NULL, 'T'},
         {"thread-height",         required_argument, NULL, 'P'},
         {"graph",         no_argument, NULL, graph_switch},
@@ -271,19 +184,22 @@ int main(int argc, char * argv[]) {
             break;
 
         case 'O':
-            optimize = true;
+            prefix_merge_global = true;
+            suffix_merge_global = true;
+            common_path_merge_global = true;
+            optimize_global = true;
             break;
 
         case 'L':
-            optimize_after = true;
+            prefix_merge_local = true;
+            suffix_merge_local = true;
+            common_path_merge_local = true;
+            optimize_local = true;
             break;
 
         case 'x':
             remove_ors = true;
-            break;
-
-        case 'l':
-            max_level = atoi(optarg);
+            optimize_global = true;
             break;
 
         case 'T':
@@ -419,51 +335,41 @@ int main(int argc, char * argv[]) {
     uint32_t automata_size = ap.getElements().size();
     uint32_t orig_automata_size = ap.getElements().size();
 
+    ap.setQuiet(quiet);
+    
+    
     if(!quiet){
         ap.printGraphStats();
     }
-
-    if(quiet)
-        ap.enableQuiet();
-        
+    
     // Optimize automata before identifying connected components
     // "Global" optimizations
     // Start optimizations
-    if(optimize) {
+    if(optimize_global) {
         if(!quiet){
-            cout << "|------------------------|" << endl;
-            cout << "|       Optimization     |" << endl;
-            cout << "|------------------------|" << endl;
+            cout << "|--------------------------|" << endl;
+            cout << "|   Global Optimizations   |" << endl;
+            cout << "|--------------------------|" << endl;
          
             cout << "Starting Global Optimizations..." << endl; 
-
         }
 
-        /***********************
-         * GLOBAL OPTIMIZATIONS
-         ***********************/
-        
-        if(!quiet)
-            cout << "Left-merging automata..." << endl;
-        ap.leftMinimize();
-        
-        while(automata_size != ap.getElements().size()) {
-            automata_size = ap.getElements().size();
-            ap.leftMinimize();
-        }
-        
-        if(!quiet)
-            cout << endl;
-        
-        // ******
-        // ADD OTHER OPTIMIZATIONS
-        // ******
+        ap.optimize(remove_ors,
+                    prefix_merge_global,
+                    suffix_merge_global,
+                    prefix_merge_global);
     }
-    
-    
+
+    if(!quiet){
+        cout << "|---------------------------|" << endl;
+        cout << "|   Automata Partitioning   |" << endl;
+        cout << "|---------------------------|" << endl;
+        
+    }
+
     // Partition automata into connected components
     if(!quiet)
-        cout << "Finding distinct subgraphs..." << endl;
+        cout << "Finding connected components..." << endl;
     vector<Automata*> ccs;
     ccs = ap.splitConnectedComponents();
     
@@ -473,7 +379,7 @@ int main(int argc, char * argv[]) {
 
     // Combine connected components into N automata
     if(!quiet)
-        cout << "Combining " << ccs.size() << " distinct subgraphs into " << num_threads << " graphs..." << endl;
+        cout << "Distributing " << ccs.size() << " distinct subgraphs among " << num_threads << " threads..." << endl;
     
     // Check if there are too many threads for the available subgraphs
     if(ccs.size() < num_threads){
@@ -493,9 +399,7 @@ int main(int argc, char * argv[]) {
             merged[counter % num_threads] = ccs[counter];
         }else{
             merged[counter % num_threads]->unsafeMerge(a);
-            
-            if(quiet)
-                merged[counter % num_threads]->enableQuiet();
+            merged[counter % num_threads]->copyFlagsFrom(a);
         }
         counter++;
     }
@@ -507,45 +411,31 @@ int main(int argc, char * argv[]) {
     // Set up multi-dimensional structure for parallelization
     Automata *automata[num_threads][num_threads_packets];
     
+    
+
+    if(optimize_local) {
+        if(!quiet){
+            cout << "|-------------------------|" << endl;
+            cout << "|   Local Optimizations   |" << endl;
+            cout << "|-------------------------|" << endl;
+        }
+    }
+
     counter = 0;
     for(Automata *a : merged) {        
-        /*****************
+        /*********************
          * LOCAL OPTIMIZATIONS
-         *****************/     
+         *********************/     
         // Optimize after connected component merging
-        if(optimize_after) {
+        if(optimize_local) {
             if(!quiet)
-                cout << "Starting Local Optimizations..." << endl; 
+                cout << "Starting Local Optimizations for Thread " << counter << "..." << endl; 
 
-            // Left minimization
-            automata_size = a->getElements().size();
-            a->leftMinimize();
-            while(automata_size != a->getElements().size()) {
-                automata_size = a->getElements().size();
-                a->leftMinimize();
-            }
-
-            if(!quiet)
-                cout << endl;
-            
-            // ******
-            // ADD OTHER OPTIMIZATIONS
-            // ******
-            
-        }
-
-        /*****************
-         * TRANSFORMATIONS
-         *****************/
-
-        // Remove OR gates, which are just syntactic sugar (benefitial for some hardware)
-        if(remove_ors) {
-            if(!quiet){
-                cout << "Removing OR gates..." << endl;
-                cout << endl;
-            }
-
-            a->removeOrGates();
+            //
+            a->optimize(false, // never do or gate removal locally
+                        prefix_merge_local,
+                        suffix_merge_local,
+                        common_path_merge_local);
         }
 
         // Enforce fan-in limit
@@ -687,18 +577,13 @@ int main(int argc, char * argv[]) {
                  ***************************/
 
                 // enable runtime profiling
-                if(profile){
-                    a->enableProfile();
-                }
+                a->setProfile(profile);
 
                 // enable state dumping
-                if(dump_state){
-                    a->enableDumpState(dump_state_cycle);
-                }                
-                
-                if(report){
-                    a->enableReport();
-                }
+                a->setDumpState(dump_state, dump_state_cycle);
+
+                // enable report gathering
+                a->setReport(report);
 
                 // Handle odd divisors
                 uint64_t length = packet_size;

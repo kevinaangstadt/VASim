@@ -16,31 +16,30 @@ Automata::Automata() {
     setErrorCode(E_SUCCESS);
 
     // Disable report vector by default
-    report = false;
+    setReport(false);
 
     // Disable profiling by default
-    profile = false;
+    setProfile(false);
 
     // Enable output by default
-    quiet = false;
+    setQuiet(false);
 
     // Initialize cycle to start at 0
     cycle = 0;
     clock = 0;
 
     // End of data is false until last cycle
-    endOfData = false;
+    setEndOfData(false);
 
     // add a base stack value
     pdstack.push_back(0);
-
+    
     // debug
-    dump_state = false;
-    dump_state_cycle = 0;
+    setDumpState(false, 0);
 }
 
 /**
- *
+ * Populates all internal graph data structures based on the connections defined in the string output arrays of Elements. Should be run after any modification to the graph.
  */
 void Automata::finalizeAutomata() {
 
@@ -61,9 +60,17 @@ void Automata::finalizeAutomata() {
             // Add the element as a parent
             addEdge(parent->getId(), child);
         }
+
+        // add to proper data structures
+        validateStartElement(parent);
+        validateReportElement(parent);
+        
     }
 }
 
+/**
+ * Constructs an automata object based on a string file name and a file type. Supported file types are "anml" and "mnrl". All unrecognized file types are assumed to be anml.
+ */
 void Automata::parseAutomataFile(string fn, string filetype) {
 
     // set filename
@@ -174,7 +181,33 @@ void Automata::reset() {
 
     // reset cycle counter to be 0
     cycle = 0;
+    
+}
 
+/**
+ * Copies flags from automata input to this automata.
+ */
+void Automata::copyFlagsFrom(Automata *a) {
+
+    setProfile(a->profile);
+    setQuiet(a->quiet);
+    setReport(a->report);
+    setDumpState(a->dump_state, a->dump_state_cycle);
+    setEndOfData(a->end_of_data);
+
+}
+
+/**
+ * Adds an STE to the current automata. Adds all edges contained in STEs output list.
+ */
+void Automata::addSTE(STE *ste) {
+
+    rawAddSTE(ste);
+    
+    // for all outputs, add a proper edge
+    for(auto str : ste->getOutputs()) {
+        addEdge(ste->getId(), str);
+    }
 }
 
 /**
@@ -191,8 +224,8 @@ void Automata::addSTE(STE *ste, vector<string> &outputs) {
     }
 }
 
-/**
- *Adds an STE to the current automata. Does not update any dangling connections.
+/** 
+ * Adds an STE to the current automata. Does not update any dangling connections.
  */
 void Automata::rawAddSTE(STE *ste) {
 
@@ -224,250 +257,23 @@ void Automata::rawAddSpecialElement(SpecialElement *specel) {
     }
 }
 
-
-
 /**
- * Converts an automata with multiple start or end states into multiple automata with single start and single end states.
- */
-vector<Automata *> Automata::generateGNFAs(){
-
-    //
-    if(!quiet){
-        cout << "  GENERATING GNFAs..." << endl;
-        cout << "  Original size: " << elements.size() << endl;
-    }
-
-    // maps nodes to a list of start/end nodes
-    unordered_map<string, vector<string>> start_markers;
-    unordered_map<string, vector<string>> end_markers;
-
-    // for each start node
-    for(STE *start : starts){
-
-        // label all reachable states using breadth first search
-        unordered_map<string, bool> visited;
-        for(auto el : elements){
-            STE *ste = static_cast<STE*>(el.second);
-            visited[ste->getId()] = false;
-        }
-
-        queue<STE*> work_queue;
-        work_queue.push(start);
-        visited[start->getId()] = true;
-        //
-        while(!work_queue.empty()){
-            STE *node = work_queue.front();
-            work_queue.pop();
-
-            //cout << "BFS considering: " << node->getId() << endl;
-
-            //mark node with start id
-            // if this is the first time we've seen this node
-            if(start_markers.find(node->getId()) == start_markers.end()){
-                vector<string> tmp;
-                tmp.push_back(start->getId());
-                start_markers[node->getId()] = tmp;
-            }else{
-                start_markers[node->getId()].push_back(start->getId());
-            }
-
-            // push children to work_queue if not visited
-            for( auto el : node->getOutputSTEPointers()){
-                STE *child = static_cast<STE*>(el.first);
-                if(!visited[child->getId()]){
-                    work_queue.push(child);
-                    visited[child->getId()] = true;
-                }
-            }
-        }
-    }
-
-    // find all end states
-    vector<STE*> ends;
-    for(auto el : elements){
-        STE *ste = static_cast<STE*>(el.second);
-        if(ste->isReporting())
-            ends.push_back(ste);
-    }
-
-    //for each accept/end state
-    // label all backwards reachable states
-    for(STE *end : ends){
-
-        // label all reachable states using reverse breadth first search
-        unordered_map<string, bool> visited;
-        for(auto el : elements){
-            STE *ste = static_cast<STE*>(el.second);
-            visited[ste->getId()] = false;
-        }
-        queue<STE*> work_queue;
-        work_queue.push(end);
-        visited[end->getId()] = true;
-        //
-        while(!work_queue.empty()){
-            STE *node = work_queue.front();
-            work_queue.pop();
-
-            //mark node with end id
-            // if this is the first time we've seen this node
-            if(end_markers.find(node->getId()) == end_markers.end()){
-                vector<string> tmp;
-                tmp.push_back(end->getId());
-                end_markers[node->getId()] = tmp;
-            }else{
-                end_markers[node->getId()].push_back(end->getId());
-            }
-
-            // push parents to work_queue if not visited
-            for(auto e : node->getInputs()){
-                string parent_id = e.first;
-                STE *parent = static_cast<STE*>(getElement(parent_id));
-                if(!visited[parent_id]){
-                    work_queue.push(parent);
-                    visited[parent_id] = true;
-                }
-            }
-        }
-    }
-
-    // construct vector of automata for each [start,accept] pair
-    automataToANMLFile("tmp.anml");
-
-    vector<Automata *> GNFAs;
-    unsigned int counter = 0;
-    for(STE * start : starts) {
-        for(STE * end: ends) {
-
-            // clone original automata
-            Automata *a = new Automata("tmp.anml");
-            cout << "  Pruning nodes in automata of size: " << a->getElements().size() << endl;
-
-            //remove all states that aren't reachable from both the start and end state
-            queue<STE *> to_remove;
-            for(auto el : a->getElements()){
-
-                STE *ste = static_cast<STE*>(el.second);
-
-                // if the STE is a start or end state that is not a part of our pair
-                // remove this status
-                if((ste->getId().compare(start->getId()) != 0) &&
-                   ste->isStart()){
-                    ste->setStart("none");
-                }
-                if((ste->getId().compare(end->getId()) != 0) &&
-                   ste->isReporting()){
-                    ste->setReporting(false);
-                }
-
-                vector<string> markers = start_markers[ste->getId()];
-                if(find(markers.begin(), markers.end(), start->getId()) == markers.end()){
-                    // remove STE
-                    to_remove.push(ste);
-                }else{
-                    markers = end_markers[ste->getId()];
-                    if(find(markers.begin(), markers.end(), end->getId()) == markers.end()){
-                        to_remove.push(ste);
-                    }else{
-                        //Keep the node!
-                    }
-                }
-            }
-
-            while(!to_remove.empty()){
-                STE * remove_this = to_remove.front();
-                to_remove.pop();
-                a->removeElement(remove_this);
-            }
-
-            if(!quiet) {
-                cout << "    extracted automata with size: " << a->getElements().size() << endl;
-            }
-
-            GNFAs.push_back(a);
-            //a->automataToDotFile("automata_" + to_string(counter) + ".dot");
-            //a->validate();
-            counter++;
-        }
-    }
-
-    remove("tmp.anml");
-
-    // return vector of GNFAs
-    return GNFAs;
-}
-
-
-/**
- * Adds all outputs of ste2 to ste1 then removes ste2 from the automata. Used in leftMinimize() prefix merging algorithm.
+ * Adds all outputs of ste2 to ste1 then removes ste2 from the automata. Used in common prefix merging algorithm.
  */
 void Automata::leftMergeSTEs(STE *ste1, STE *ste2) {
 
-
-    // for all output edges in ste2;
-    // 1) add outputs to ste1
-    // 2) adjust inputs of output target nodes to reflect ste1, not ste2
-    for(string str : ste2->getOutputs()) {
-
-        // add outputs from ste2 to outputs list of ste1
-        if(Element::stripPort(str).compare(ste2->getId()) != 0){
-            ste1->addOutput(str);
-            Element * e = getElement(str);
-            // we may have already removed this
-            if( e != NULL ){
-                pair<Element *, string> output(e, Element::getPort(str));
-                ste1->addOutputPointer(output);
-            }
-
-            // adjust inputs of output to reflect new parent
-            // inputs are of the form "fromNodeId:toPort"
-            // remove old input to child from ste2
-
-            string port = Element::getPort(str);
-            //if(!port.empty())
-            //port = ":" + port;
-            Element * e2 = getElement(str);
-            if(e2 != NULL){
-                e2->removeInput(ste2->getId() + port);
-                // add new input to child from ste1
-                e2->addInput(ste1->getId() + port);
-            }
-        }
+    // add all outputs from ste2 to ste1
+    for(auto e : ste2->getOutputSTEPointers()){
+        STE *output = static_cast<STE*>(e.first);
+        addEdge(ste1, output);
     }
 
-    // for all input edges;
-    // 1) remove the output to ste2 from the parent node if it exists
-    //    output to ste1 must necessarily exist
-    for(auto e : ste2->getInputs()) {
-
-        // if the input node is not ourself
-        if(Element::stripPort(e.first).compare(ste2->getId()) != 0) {
-
-            // get parent node if it exists
-            Element * parent = getElement(e.first);
-
-            string port = Element::getPort(e.first);
-            if(!port.empty())
-                port = ":" + port;
-            parent->removeOutput(ste2->getId() + port);
-            pair<Element *, string> output(ste2, ste2->getId() + port);
-            parent->removeOutputPointer(output);
-        }
+    // remove all edges from ste2 to output
+    for(auto e : ste2->getOutputSTEPointers()){
+        STE *output = static_cast<STE*>(e.first);
+        removeEdge(ste2, output);
     }
 
-    // SANITY CHECK IF WE STILL EXIST
-    for(auto e : ste2->getInputs()) {
-        if(Element::stripPort(e.first).compare(ste2->getId()) != 0) {
-
-            // get parent node if it exists
-            Element * parent = getElement(e.first);
-            for(string e2 : parent->getOutputs()) {
-                if(e2.compare(ste2->getId()) == 0)
-                    cout << "WAS NOT REMOVED" << endl;
-            }
-        }
-    }
-
-    // remove merged ste from global maps
     removeElement(ste2);
 }
 
@@ -565,21 +371,7 @@ vector<Automata*> Automata::splitConnectedComponents() {
 
     // transfer flags
     for(Automata *a : connectedComponents) {
-        if(quiet){
-            a->enableQuiet();
-        }
-
-        if(profile){
-            a->enableProfile();
-        }
-
-        if(report){
-            a->enableReport();
-        }
-
-        if(dump_state){
-            a->enableDumpState(dump_state_cycle);
-        }
+        a->copyFlagsFrom(this);
     }
 
     // return vector
@@ -610,18 +402,8 @@ Automata *Automata::clone() {
     // Create empty automata and merge us into it
     ap->unsafeMerge(this);
 
-    if(profile)
-        ap->enableProfile();
-
-    if(quiet)
-        ap->enableQuiet();
-
-    if(report)
-        ap->enableReport();
-
-    if(dump_state)
-        ap->enableDumpState(dump_state_cycle);
-
+    ap->copyFlagsFrom(this);
+    
     return ap;
 }
 
@@ -757,9 +539,9 @@ uint32_t Automata::getMaxStackSize() {
 /**
  * Enables automata profiling during automata simulation.
  */
-void Automata::enableProfile() {
+void Automata::setProfile(bool profile_flag) {
 
-    profile = true;
+    profile = profile_flag;
 
     // If we're profiling, map STEs to a counter for each state
     if(profile){
@@ -773,30 +555,30 @@ void Automata::enableProfile() {
 /**
  * Enables report recording during automata simulation.
  */
-void Automata::enableReport() {
-    report = true;
+void Automata::setReport(bool report_flag) {
+    report = report_flag;
 }
 
 /**
  * Supresses all output.
  */
-void Automata::enableQuiet() {
-    quiet = true;
+void Automata::setQuiet(bool quiet_flag) {
+    quiet = quiet_flag;
 }
 
 /**
- * Enables dynamic state logging. Dumps all states that activated on cycle dump_cycle. Acts as a debug break point. Currently only works for STEs.
+ * Enables dynamic state logging. Dumps all states that activated on cycle dump_cycle. Acts as a debug break point. Currently only works for STEs. 
  */
-void Automata::enableDumpState(uint64_t dump_cycle) {
-    dump_state = true;
+void Automata::setDumpState(bool dump_flag, uint64_t dump_cycle) {
+    dump_state = dump_flag;
     dump_state_cycle = dump_cycle;
 }
 
 /**
- * Disables automata profiling.
+ * Sets end of data flag. If any reporting elements only report on end of data and this flag is set, the elements will report.
  */
-void Automata::disableProfile() {
-    profile = false;
+void Automata::setEndOfData(bool eod) {
+    end_of_data = eod;
 }
 
 
@@ -839,6 +621,7 @@ bool Automata::simulate() {
   if(not_eps) {
     return true;
   }
+   
   // Step 1: calculate activations
   // // we're going to just activate all of these
   while(!enabledSTEs.empty()) {
@@ -847,13 +630,14 @@ bool Automata::simulate() {
       case STE_T:
       case PDSTATE_T:
           STE *s = dynamic_cast<STE*>(e);
+          
           s->activate();
 
           // we need to handle reporting
           // report
           if(report && s->isReporting()) {
                  if(s->isEod()) {
-                         if(endOfData)
+                         if(end_of_data)
                                 reportVector.push_back(make_pair(cycle, s->getId()));
                  }else{
                          reportVector.push_back(make_pair(cycle, s->getId()));
@@ -935,13 +719,14 @@ bool Automata::simulate(uint8_t symbol) {
             case STE_T:
             case PDSTATE_T:
                 STE *s = dynamic_cast<STE*>(e);
+                
                 s->activate();
 
                 // we need to handle reporting
                 // report
 				        if(report && s->isReporting()) {
 					             if(s->isEod()) {
-						                   if(endOfData)
+						                   if(end_of_data)
 							                        reportVector.push_back(make_pair(cycle, s->getId()));
 					             }else{
 						                   reportVector.push_back(make_pair(cycle, s->getId()));
@@ -965,7 +750,6 @@ bool Automata::simulate(uint8_t symbol) {
 
     // Debug state
     if(dump_state && (dump_state_cycle == cycle)){
-        cout << "====================" << endl << " Cycle " << cycle << endl << "====================" << endl;
         dumpSTEState("stes_" + to_string(cycle) + ".state");
     }
 
@@ -1058,6 +842,7 @@ void Automata::profileActivations() {
 
     // Get per cycle stats
     activatedHist.push_back(activatedSTEs.size());
+    
 
     // Get per STE stats
     // Check number of times each ste was activated per step
@@ -1065,6 +850,7 @@ void Automata::profileActivations() {
     while(!activatedSTEs.empty()) {
 
         STE* s = activatedSTEs.back();
+
         tmp.push(s);
         activatedSTEs.pop_back();
 
@@ -1115,9 +901,18 @@ void Automata::simulate(uint8_t *inputs, uint64_t start_index, uint64_t length, 
     // for all inputs
     for(uint64_t i = start_index; i < start_index + length; i = i + 1) {
 
-        // set end of data flag
-        if( i == total_length - 1 )
-            endOfData = true;;
+        // set end of data flag if its the last byte
+        if( i == total_length - 1 ) {
+            setEndOfData(true);
+        }    
+        // set end of data flag if the byte is a "\n"
+        else if( inputs[i] == (uint32_t)'\n' ) {
+            setEndOfData(true);
+        }
+        // unset end of data otherwise
+        else {
+            setEndOfData(false);
+        }
 
         // measure progress on longer runs
         if(!quiet) {
@@ -1593,58 +1388,57 @@ void Automata::automataToDotFile(string out_fn) {
 /**
  * UNFINISHED:: Removes OR gates from the automata. OR gates are syntactic sugar introduced by Micron's optimizing compiler and other automata engines may not support them, so we allow their removal.
  */
-void Automata::removeOrGates() {
+uint32_t Automata::removeOrGates() {
 
     // for each special element that is an OR gate
-    queue<Element *> toRemove;
-    for(auto el : specialElements) {
+    queue<OR *> ORGates;
+    uint32_t removed = 0;
+    for(auto el : specialElements) { 
         SpecialElement * specel = el.second;
 
         // if we're not an OR gate, continue
         if(dynamic_cast<OR*>(specel) == NULL) {
-            //cout << specel->toString() << endl;
             continue;
-
         }
 
-        // FOR NOW ONLY REMOVE IF WE DONT HAVE CHILDREN
-        // TODO
-        if(specel->getOutputs().size() > 0)
-            continue;
+        ORGates.push(static_cast<OR*>(specel));
 
+    }
+
+    // remove all the OR gates
+    while(!ORGates.empty()){
+
+        OR *or_gate = ORGates.front();
+        ORGates.pop();
+        
         // if it reports
-        if(specel->isReporting()){
+        if(or_gate->isReporting()){
 
             //// make all of its parents report with the same ID
-            for(auto e : specel->getInputs()){
+            for(auto e : or_gate->getInputs()){
                 Element *parent = getElement(e.first);
                 parent->setReporting(true);
-                parent->setReportCode(specel->getReportCode());
+                parent->setReportCode(or_gate->getReportCode());
                 // remove or gate from outputs
-                parent->removeOutput(specel->getId());
-                parent->removeOutputPointer(make_pair(specel, specel->getId()));
+                parent->removeOutput(or_gate->getId());
+                parent->removeOutputPointer(make_pair(or_gate, or_gate->getId()));
             }
-
-            //// mark OR gate for removal from the automata
-            toRemove.push(specel);
         }
 
-        // else if it does not report
+        // add edges between all parents and children
+        for(string output : or_gate->getOutputs()){
+            for(auto input : or_gate->getInputs()){
+                addEdge(input.first, output);
+            }
+        }
 
-        //// for each input element
+        // remove OR gate
+        removed++;
+        removeElement(or_gate);
 
-        ////// for each output element
-
-        //////// connect input to output
-
-        //////// remove OR gate from the automata
     }
 
-    // remove OR gates from the automata
-    while(!toRemove.empty()) {
-        removeElement(toRemove.front());
-        toRemove.pop();
-    }
+    return removed;
 }
 
 /**
@@ -1691,7 +1485,7 @@ void Automata::removeCounters() {
 
     // remove Counters from the automata
     // replace with the same number of STEs
-    while(!toRemove.empty()) {
+    while(!toRemove.empty()) { 
 
         Counter * counter = static_cast<Counter *>(toRemove.front());
         toRemove.pop();
@@ -1722,7 +1516,7 @@ void Automata::removeCounters() {
                                       "none");
 
 
-            cout << "Adding new ste: " << i << endl;
+            cout << "Adding new ste: " << i << endl;            
             // adjust pointers
             // remove all current pointers from cloned node
             input_next->clearOutputs();
@@ -1736,8 +1530,8 @@ void Automata::removeCounters() {
             input_prev->addOutput(input_next->getId());
             input_prev->addOutputPointer(make_pair(input_next, input_next->getId()));
 
-            vector<string> does_nothing;
-            addSTE(input_next, does_nothing);
+            // add STE to the automata
+            rawAddSTE(input_next);
 
             // march along
             input_prev = input_next;
@@ -1774,7 +1568,7 @@ void Automata::automataToNFAFile(string out_fn) {
             return;
         }
     }
-
+    
     unordered_map<string, int> id_map;
     unordered_map<string, bool> marked;
     queue<string> to_process;
@@ -1786,9 +1580,9 @@ void Automata::automataToNFAFile(string out_fn) {
     // Header
     str += "#NFA\n";
 
-    /*
+    /* 
      * Because each AP state is an NFA edge, we must instantiate
-     * a start NFA state and add transitions to all start states
+     * a start NFA state and add transitions to all start states 
      * in the automata.
      */
     str += to_string(state_counter++) + ": initial\n";
@@ -2204,6 +1998,15 @@ void Automata::automataToBLIFFile(string out_fn) {
 
     string str = "";
 
+    // ------------------------
+    // Hardware constraints
+    // ------------------------
+    // STE enable input limit
+    // 16 is the default limit imposed by the D480AP (d480.xml)
+    uint32_t ste_enable_limit = 16;
+    // ------------------------
+
+
     // emit header for module
     str += ".model blif_by_VASim\n";
 
@@ -2257,6 +2060,7 @@ void Automata::automataToBLIFFile(string out_fn) {
         // INPUTS
         // add global enable ports to start states
         // for each input
+        uint32_t input_counter = 0;
         for(auto in : s->getInputs()){
 
             string parent = in.first;
@@ -2271,6 +2075,13 @@ void Automata::automataToBLIFFile(string out_fn) {
             uint32_t portnumber = enable_counter[s->getId()];
             str += "enable[" + to_string(portnumber) + "]=" + wire + " ";
             enable_counter[s->getId()] = portnumber + 1;
+
+            // do a check to see if this automata is legal given hw constraints
+            input_counter++;
+            if(input_counter > ste_enable_limit) {
+                cout << "ERROR:: Automata fan-in is too large. STE " << s->getId() << " has too many inputs. HW limit is " << ste_enable_limit << ". Exiting..." << endl;
+                exit(1);
+            }
         }
 
         // Fill rest of inputs with unconn dummy nets
@@ -2304,7 +2115,7 @@ void Automata::automataToBLIFFile(string out_fn) {
     // emit the STE blackbox model
     str += ".model ste\n";
     str += ".inputs ";
-    for(int i = 0; i < 16; i++)
+    for(int i = 0; i < ste_enable_limit; i++)
         str += "enable[" + to_string(i) + "] " ;
     str += "clock\n";
     str += ".outputs active\n";
@@ -2768,7 +2579,7 @@ void Automata::computeSTEMatches(uint8_t symbol) {
             // report
             if(report && s->isReporting()) {
                 if(s->isEod()) {
-                    if(endOfData)
+                    if(end_of_data)
                         reportVector.push_back(make_pair(cycle, s->getId()));
                 }else{
                     reportVector.push_back(make_pair(cycle, s->getId()));
@@ -2997,85 +2808,70 @@ uint64_t Automata::tock() {
 /**
  * Merges identical prefixes of automaton. Uses a depth first search on the automata, combining states with identical inputs and properties, but varying outputs. Does not currently merge prefixes with back references (loops).
  */
-uint32_t Automata::leftMinimize() {
-
-
-    leftMinimizeStartStates();
+uint32_t Automata::mergeCommonPrefixes() {
 
     uint32_t merged = 0;
+    
+    unmarkAllElements();
 
-    if(!quiet)
-        cout << "  Merging inner states..." << endl;
-
-    for(auto e : starts){
-
-        // unmark all elements
-        unmarkAllElements();
-
-        STE * s = static_cast<STE *>(e);
-        merged += leftMinimizeChildren(s, 0);
+    // start search by considering all start states
+    queue<STE*> workq;
+    for(STE *ste : starts){
+        ste->mark();
+        workq.push(ste);
     }
 
-    if(!quiet)
-        cout << "    merged " << merged << " inner states..." << endl;
+    merged += mergeCommonPrefixes(workq);
 
     return merged;
 }
 
 /**
- * Recursive function that considers merging all candidate STEs at the current level, and calls left minimization on every subsequent unique child in a depth-first fashion.
+ * Recursive function that considers merging all candidate STEs in the current workq. Recursively calls itselfe with a new workq with all child candidates that could possibly be merged.
  */
-uint32_t Automata::leftMinimizeChildren(STE * s, int level) {
+uint32_t Automata::mergeCommonPrefixes(queue<STE *> &workq) {
 
-    queue<STE *> workq;
-    queue<STE *> workq_tmp;
-
-    vector<STE *> outputSTE;
-
+    queue<STE*> next_level;
+    queue<STE*> workq_tmp;
+    
     uint32_t merged = 0;
-
-    // add all children to the workq
-    for(auto e : s->getOutputSTEPointers()) {
-        STE * node = static_cast<STE*>(e.first);
-        if(!node->isMarked()) {
-            node->mark();
-            workq.push(node);
-        }
-    }
-
+    
     // merge identical children of next level
-    while(!workq.empty()) {
+    while(!workq.empty()) { 
         STE * first = workq.front();
         workq.pop();
+        
         while(!workq.empty()) {
             STE * second = workq.front();
-            workq.pop();
-            //if the same merge and place into second queue
 
-            if(first->compare(second) == 0) {
+            workq.pop();
+            //if the two STEs have identical prefixes, merge
+            if(first->leftCompare(second)) {
                 merged++;
                 leftMergeSTEs(first, second);
                 //else push back onto workq
             } else {
                 workq_tmp.push(second);
+            }	 
+        }
+
+        // Add all children of first to the next level
+        for(auto c : first->getOutputSTEPointers()) {
+            STE * child = static_cast<STE*>(c.first);
+            if(!child->isMarked()){
+                child->mark();
+                next_level.push(child);
             }
         }
 
-        outputSTE.push_back(first);
+        // Recurse downward
+        if(next_level.size() > 0)
+            merged += mergeCommonPrefixes(next_level);
 
+        // Try another candidate
         while(!workq_tmp.empty()) {
             workq.push(workq_tmp.front());
             workq_tmp.pop();
-        }
-    }
-
-    // left minimize children
-    for(auto e : outputSTE) {
-        if(e->getOutputSTEPointers().size() != 0) {
-            for(auto f : s->getOutputSTEPointers()) {
-                STE * node = static_cast<STE*>(f.first);
-                merged += leftMinimizeChildren(node, level + 1);
-            }
         }
     }
 
@@ -3083,57 +2879,168 @@ uint32_t Automata::leftMinimizeChildren(STE * s, int level) {
 }
 
 /**
- * Merges all identical start states.
+ * Merges identical suffixes of automaton. Uses a depth first search on the automata, combining states with identical outputs and properties, but varying inputs. Does not currently merge suffixes with back references (loops).
  */
-void Automata::leftMinimizeStartStates() {
+uint32_t Automata::mergeCommonSuffixes() {
 
-    if(!quiet)
-        cout << "  Merging start states..." << endl;
-
-    uint32_t merge_count = 0;
-
-    // unmark all elements
+    uint32_t merged = 0;
+    
     unmarkAllElements();
 
-    queue<STE *> workq;
-    queue<STE *> workq_tmp;
-
-    //push all start STE's onto the queue
-    for(auto e : starts) {
-        STE * s = static_cast<STE*>(e);
-        workq.push(s);
+    // start search by considering all start states
+    queue<STE*> workq;
+    for(Element *el : reports){
+        if(!el->isSpecialElement()) {
+            STE *ste = static_cast<STE*>(el);
+            ste->mark();
+            workq.push(ste);
+        }
     }
 
-    // Merge start states
-    while(!workq.empty()) {
+    merged += mergeCommonSuffixes(workq);
 
+    return merged;
+}
+
+/**
+ * Recursive function that considers merging all candidate STEs in the current workq. Recursively calls itselfe with a new workq with all child candidates that could possibly be merged.
+ */
+uint32_t Automata::mergeCommonSuffixes(queue<STE *> &workq) {
+
+    queue<STE*> next_level;
+    queue<STE*> workq_tmp;
+    
+    uint32_t merged = 0;
+    
+    // merge identical parents of next level
+    while(!workq.empty()) { 
         STE * first = workq.front();
-        bitset<256> first_column = first->getBitColumn();
         workq.pop();
-
+        
         while(!workq.empty()) {
             STE * second = workq.front();
-            workq.pop();
 
-            //if the same, merge and place into second queue
-            if(first_column == second->getBitColumn() &&
-               first->getStart() == second->getStart()){
-                // merge
-                merge_count++;
-                leftMergeSTEs(first, second);
+            workq.pop();
+            //if the two STEs have identical sufffixes, merge
+            if(first->rightCompare(second)) {
+                merged++;
+                rightMergeSTEs(first, second);
+                //else push back onto workq
             } else {
                 workq_tmp.push(second);
+            }	 
+        }
+
+        // Add all parents of first to the next level
+        for(auto c : first->getInputs()) {
+            Element *el = getElement(c.first);
+            if(!el->isSpecialElement()) {
+                STE * child = static_cast<STE*>(el);
+                if(!child->isMarked()){
+                    child->mark();
+                    next_level.push(child);
+                }
             }
         }
 
+        // Recurse downward
+        if(next_level.size() > 0)
+            merged += mergeCommonSuffixes(next_level);
+
+        // Try another candidate
         while(!workq_tmp.empty()) {
             workq.push(workq_tmp.front());
             workq_tmp.pop();
         }
     }
 
-    if(!quiet)
-        cout << "    merged " << merge_count << " start states!" << endl;
+    return merged;
+}
+
+/**
+ * If two STEs share the same parents and the same children, they can be combined into
+ *   one STE with the union of their character sets.
+ */
+uint32_t Automata::mergeCommonPaths() {
+
+    uint32_t merged = 0;
+    
+    //
+    unmarkAllElements();
+
+    //
+    queue<STE*> to_remove;
+    
+    // for each element
+    for(auto e : elements) {
+        
+        //
+        Element *el = e.second;
+
+        // skip if we've been removed
+        if(el->isMarked())
+            continue;
+
+        el->mark();
+        
+        // skip special elements
+        if(el->isSpecialElement())
+            continue;
+
+        // skip reporting elements
+        if(el->isReporting())
+            continue;
+        
+        // find candidates to compare
+        // all children's parents
+        for(string c : el->getOutputs()){
+
+            Element *child = getElement(c);
+            if(child->isSpecialElement())
+                continue;
+
+            
+            for(auto p : child->getInputs()){
+                Element * childs_parent = getElement(p.first);
+
+                if(childs_parent->isSpecialElement())
+                    continue;
+
+                // skip if we've already considered this one
+                if(childs_parent->isMarked())
+                    continue;
+                
+                // if the two elements share identical parents and children lists
+                if(el->identicalInputs(childs_parent) &&
+                   el->identicalOutputs(childs_parent)) {
+
+                    STE *ste1 = static_cast<STE*>(el);
+                    STE *ste2 = static_cast<STE*>(childs_parent);
+                    
+                    // add charset of childs_parent to el
+                    for(uint32_t symbol = 0; symbol < 256; symbol++) {
+                        if(ste2->match(symbol))
+                            ste1->addSymbolToSymbolSet(symbol);
+                    }
+
+                    // delete ste2
+                    ste2->mark();
+                    to_remove.push(ste2);
+
+                    merged++;
+                }
+            }
+        }
+    }
+
+    // remove all elements marked for deletion
+    while(!to_remove.empty()){
+        removeElement(to_remove.front());
+        to_remove.pop();
+    }
+
+    return merged;
+    
 }
 
 /**
@@ -3249,7 +3156,7 @@ void Automata::printSTEComplexity() {
 void Automata::printGraphStats() {
 
 
-    cout << "Automata Statistics" << endl;
+    cout << "Automata Statistics:" << endl;
     cout << "  Elements: " << elements.size() << endl;
     cout << "  STEs: " << elements.size() - specialElements.size() << endl;
     cout << "  SpecialElements: " << specialElements.size() << endl;
@@ -3339,43 +3246,30 @@ void Automata::printGraphStats() {
  */
 void Automata::rightMergeSTEs(STE *ste1, STE *ste2){
 
-    // for all input edges in ste2
-    // 1) add inputs to ste1
-    // 2) adjust outputs of input target node to reflect ste1, not ste2
-    for(auto e : ste2->getInputs()) {
-        string input_str = e.first;
-        // add inputs from ste2 to inputs list of ste1
-        Element * input_el;
-        if(Element::stripPort(input_str).compare(ste2->getId()) != 0){
-            ste1->addInput(input_str);
-            input_el = getElement(input_str);
-        }else{
-            continue;
-        }
+    // add all inputs to ste1
+    for(auto input : ste2->getInputs()){
+        STE *in_ste = static_cast<STE*>(getElement(input.first));
+        addEdge(in_ste, ste1);
+    }
 
-        // adjust outputs of input to reflect new child
-        // outputs are of the form "toNodeId:toPort"
-        // remove old output from parent from ste2
-        string port = Element::getPort(input_str);
-        if(!port.empty())
-            port = ":" + port;
-        //
-        if( input_el != NULL) {
+    // 
+    for(auto input : ste2->getInputs()){
+        STE *in_ste = static_cast<STE*>(getElement(input.first));
+        removeEdge(in_ste, ste2);
+    }
 
-            // remove old outputs
-            input_el->removeOutput(ste2->getId() + port);
-            input_el->removeOutputPointer(make_pair(ste2, ste2->getId() + port));
+    removeElement(ste2);
+}
 
-            // add new outputs if it doesn't exist already
-            // NOT SURE WHY THIS IS NECESSARY
-            // note: removing before adding is a way to guarantee there is only one copy
-            //       in the outputs list. This was a bug that occured on Fermi.1chip.
-            //       Again, not sure where the bug is. TODO/FIXME.
-            input_el->removeOutput(ste1->getId() + port);
-            input_el->addOutput(ste1->getId() + port);
-            pair<Element *, string> output = make_pair(ste1,ste1->getId() + port);
-            input_el->removeOutputPointer(output);
-            input_el->addOutputPointer(output);
+/**
+ * Adds all members of ste2's charset to ste1's charset and then deletes ste2
+ */
+void Automata::mergeSTEs(STE *ste1, STE *ste2){
+
+    // add charset of ste2 to ste1
+    for(uint32_t i = 0; i < ste2->getBitColumn().size(); i++) {
+        if(ste2->match(i)){
+            ste1->addSymbolToSymbolSet(i);
         }
     }
 
@@ -3386,24 +3280,24 @@ void Automata::rightMergeSTEs(STE *ste1, STE *ste2){
  * Guarantees that the fan-in for every node does not exceed fanin_max.
  */
 void Automata::enforceFanIn(uint32_t fanin_max){
-
-    // BFS queue of elements to process
+    
+    // BFS queue of elements to process 
     queue<STE*> workq;
 
     // unmark all elements
     unmarkAllElements();
-
+    
     // push all start states to workq
-    for(auto el : getElements()){
+    for(auto el : getElements()){ 
 
         // ignore special elements
         if(el.second->isSpecialElement()){
             continue;
         }
-
+        
         STE * s = static_cast<STE*>(el.second);
 
-        // push start states to workq
+        // push start states to workq    
         if(s->isStart()){
             // mark node
             s->mark();
@@ -3414,7 +3308,7 @@ void Automata::enforceFanIn(uint32_t fanin_max){
 
     // look for elements with fanins that violate fanin_max
     while(!workq.empty()){
-
+       
         // get node to work on
         STE * s = workq.front();
         workq.pop();
@@ -3679,8 +3573,7 @@ void Automata::dumpSTEState(string filename) {
         temp.pop();
     }
 
-    cout << s << endl;
-    //writeStringToFile(s, filename);
+    writeStringToFile(s, filename);
 }
 
 /**
@@ -4089,4 +3982,121 @@ void Automata::eliminateDeadStates() {
         toRemove.pop();
         removeElement(el);
     }
+}
+
+/**
+ * Redundant edges include those that connect to "all-input" start states.
+ *   all input start states are enabled on every cycle and so incoming edges
+ *   are always redundant.
+ */
+void Automata::removeRedundantEdges() {
+
+    // remove any input edge to an all-input start state
+    for(STE *ste: getStarts()){
+
+        if(ste->getStringStart().compare("all-input") == 0){
+
+            // remove all incoming edges
+            for(auto in : ste->getInputs()){
+                removeEdge(getElement(in.first), ste);
+            }
+        }
+    }
+
+    // add other instances here.
+}
+
+/**
+ *
+ */
+void Automata::optimize(bool remove_ors,
+                        bool left,
+                        bool right,
+                        bool common_path
+                        ){
+
+    // REMOVE OR GATES
+    uint32_t removed_ors = 0;
+    if(remove_ors) {
+        if(!quiet)
+            cout << " * Removing OR gates..." << endl;
+
+        removed_ors = removeOrGates();
+
+        if(!quiet)
+            cout << "     removed " << removed_ors << " OR gates..." << endl;
+
+    }
+
+
+    // NFA REDUCTION ALGORITHMS
+
+    // PREFIX MERGING
+    if(left) {
+        if(!quiet) {
+            cout << " * Merging common prefixes..." << endl;
+        }
+        
+        uint32_t automata_size = 0;
+        uint32_t merged = 0;
+        while(automata_size != elements.size()) {
+            automata_size = elements.size();
+            
+            // prefix merge call
+            merged += mergeCommonPrefixes();
+            
+        }
+        
+        if(!quiet)
+            cout << "     removed " << merged << " elements..." << endl;
+        
+    }
+
+    // SUFFIX MERGING
+    if(right) {
+        if(!quiet) {
+            cout << " * Merging common suffixes..." << endl;
+        }
+        
+        uint32_t automata_size = 0;
+        uint32_t merged = 0;
+        while(automata_size != elements.size()) {
+            automata_size = elements.size();
+            
+            // prefix merge call
+            merged += mergeCommonSuffixes();
+            
+        }
+        
+        if(!quiet)
+            cout << "     removed " << merged << " elements..." << endl;
+        
+    }
+
+    if(common_path) {
+        
+        if(!quiet) {
+            cout << " * Merging common paths..." << endl;
+        }
+        
+        uint32_t automata_size = 0;
+        uint32_t merged = 0;
+        while(automata_size != elements.size()) {
+            automata_size = elements.size();
+            
+            // common path merge call
+            merged += mergeCommonPaths();
+            
+        }
+        
+        if(!quiet)
+            cout << "     removed " << merged << " elements..." << endl;
+        
+    
+    }
+
+    //
+    
+    if(!quiet)
+        cout << endl;
 }

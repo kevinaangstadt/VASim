@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
 
   ap.finalizeAutomata();
 
-  ap.enableReport();
-  ap.enableProfile();
+  ap.setReport(true);
+  ap.setProfile(true);
 
   ap.initializeSimulation();
 
