@@ -6,8 +6,12 @@
 
 #include "stdint.h"
 #include "stdio.h"
+#include <algorithm>
 
 #define INITIAL 1000
+
+using std::copy;
+using std::swap;
 
 /*
  * Container for passing elements between stages
@@ -23,7 +27,9 @@ protected:
 
 public:
     Stack();
+    Stack(const Stack&);
     ~Stack();
+    Stack &operator=(const Stack &);
     void push_back(T const &);
     void pop_back();
     T back() const;
@@ -45,12 +51,30 @@ Stack<T>::Stack() {
 
 }
 
+template <class T>
+Stack<T>::Stack(const Stack<T> &other) {
+  top = other.top;
+  max_size = other.max_size;
+  stack = new T[max_size];
+  copy(other.stack, other.stack + other.max_size, stack);
+}
+
 /*
  *
  */
 template <class T>
 Stack<T>::~Stack() {
+  delete[] stack;
+  stack = nullptr;
+}
 
+template <class T>
+Stack<T> &Stack<T>::operator=(const Stack<T> &other) {
+  Stack<T> tmp(other);
+  swap(top, tmp.top);
+  swap(max_size, tmp.max_size);
+  swap(stack, tmp.stack);
+  return *this;
 }
 
 template <class T>
