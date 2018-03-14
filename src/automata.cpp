@@ -2690,7 +2690,7 @@ bool Automata::computeStackMatches() {
         return true;
     }
 
-    Stack<Element *> tmp = enabledSTEs;
+    Stack<Element *> tmp(enabledSTEs);
     enabledSTEs = Stack<Element *>();
     bool eps = false;
 
@@ -2790,47 +2790,51 @@ void Automata::computeSTEMatches(uint8_t symbol) {
  *
  * Note: this is really meant for when there is one element active; otherwise computation is ND
  */
-void Automata::performStackOperations() {
-    Stack<STE*> tmp = activatedSTEs;
-    activatedSTEs = Stack<STE*>();
+ void Automata::performStackOperations() {
+     Stack<STE*> tmp;
 
-    while(!tmp.empty()) {
-        // peek the STE
-        STE *s = tmp.back();
+     while(!activatedSTEs.empty()) {
+         // peek the STE
+         STE *s = activatedSTEs.back();
 
-        // we only want to handle PDStates
-        switch(s->getType()) {
-        case PDSTATE_T: {
-            PDState *pd = dynamic_cast<PDState *>(s);
+         // we only want to handle PDStates
+         switch(s->getType()) {
+         case PDSTATE_T: {
+             PDState *pd = dynamic_cast<PDState *>(s);
 
-            if(pd->getPop()) {
-                // do a stack pop
-                pdstack.pop_back();
-            }
+             for(uint8_t i=0; i < pd->getPop(); ++i) {
+                 if(pdstack.size() == 0) {
+                   cout << "Warning: trying to pop empty stack" << endl;
+                   continue;
+                 }
+                 // do a stack pop
+                 pdstack.pop_back();
+             }
 
-            if(pd->getPush()) {
-                pdstack.push_back(pd->getPushChar());
-            }
+             if(pd->getPush()) {
+                 pdstack.push_back(pd->getPushChar());
+             }
 
-            break;
-        }
-        default:
-            // do nothing
-            break;
-        }
+             break;
+         }
+         default:
+             // do nothing
+             break;
+         }
 
-        // add to our tmp stack
-        activatedSTEs.push_back(s);
+         // add to our activatedSTEs stack
+         tmp.push_back(s);
 
-        // remove the STE
-        tmp.pop_back();
+         // remove the STE
+         activatedSTEs.pop_back();
 
-        if(profile) {
-          maxStackSize = max(maxStackSize, pdstack.size());
-        }
+         if(profile) {
+           maxStackSize = max(maxStackSize, (uint32_t)pdstack.size());
+         }
 
-    }
-}
+     }
+     swap(tmp,activatedSTEs);
+ }
 
 /**
  * Propagate activation signal of STEs that match on the current input symbol. Enables Element children of active STEs.
@@ -3305,7 +3309,7 @@ void Automata::printGraphStats() {
             total_peek++;
           }
 
-          if(s->getPop()) {
+          if(s->getPop() != 0) {
             total_pop++;
           }
 

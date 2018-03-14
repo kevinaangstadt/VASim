@@ -117,7 +117,7 @@ PDState *MNRLAdapter::parsePDState(shared_ptr<MNRLHPDState> hPDState) {
         }
     }
     
-    bool pop = hPDState->getPop();
+    uint8_t pop = (uint8_t) hPDState->getPop();
     bool eps = hPDState->isEpsilonInput();
     bool push = hPDState->doesStackPush();
     

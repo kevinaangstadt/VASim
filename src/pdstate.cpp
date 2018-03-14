@@ -7,7 +7,7 @@ PDState::PDState(string id,
                  string stack_set,
                  uint8_t push_char,
                  bool push,
-                 bool pop,
+                 uint8_t pop,
                  bool eps,
                  string start) :
             STE(id,symbol_set,start),
@@ -29,7 +29,7 @@ PDState::~PDState() {}
 ElementType PDState::getType() { return PDSTATE_T; }
 
 bool PDState::getPush() { return push; }
-bool PDState::getPop() { return pop; }
+uint8_t PDState::getPop() { return pop; }
 uint8_t PDState::getPushChar() { return push_char; }
 
 bool PDState::isInputEpsilon() { return eps; }

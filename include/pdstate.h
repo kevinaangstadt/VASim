@@ -15,7 +15,7 @@ public:
             std::string stack_set,
             uint8_t push_char,
             bool push,
-            bool pop,
+            uint8_t pop,
             bool eps,
             std::string start);
     ~PDState();
@@ -27,7 +27,7 @@ public:
     };
 
     bool getPush();
-    bool getPop();
+    uint8_t getPop();
     uint8_t getPushChar();
 
     bool isInputEpsilon();
@@ -40,7 +40,7 @@ protected:
     std::bitset<256> stack_column;
 
     bool push;
-    bool pop;
+    uint8_t pop;
     bool eps;
 
 };

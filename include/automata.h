@@ -43,7 +43,7 @@ private:
     uint32_t dump_state_cycle;
 
     // our DPDA stack
-    Stack<uint8_t> pdstack;
+    std::deque<uint8_t> pdstack;
 
     std::unordered_map<std::string, Element*> elements;
     std::vector<STE*> starts;
@@ -98,6 +98,7 @@ public:
     std::unordered_map<std::string, SpecialElement *> &getSpecialElements();
     std::unordered_map<std::string, uint32_t> &getActivationHist();
     std::vector<std::pair<uint64_t, std::string>> &getReportVector();
+    std::deque<uint8_t> &getPDStack() { return pdstack; }
     uint32_t getMaxActivations();
     uint32_t getMaxStackSize();
     void enableProfile();
