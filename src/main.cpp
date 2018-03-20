@@ -37,6 +37,7 @@ void usage(char * argv) {
     printf("      --graph               Output automata as .graph file for HyperScan.\n");
 
     printf("\n OPTIMIZATIONS:\n");    
+    printf("  -E, --optimize-epsilon    Reduce linear epsilon transitions.\n");
     printf("  -O, --optimize-global     Run all optimizations on all automata subgraphs.\n");
     printf("  -L, --optimize-logal      Run all optimizations on automata subgraphs after partitioned among parallel threads.\n");
     printf("  -x, --remove_ors          Remove all OR gates. Only applied globally.\n");
@@ -77,6 +78,7 @@ int main(int argc, char * argv[]) {
     bool to_anml = false;
     bool to_mnrl = false;
     bool time = false;
+    bool optimize_epsilon = false;
     bool optimize_global = false;
     bool prefix_merge_global = false;
     bool prefix_merge_local = false;
@@ -105,7 +107,7 @@ int main(int argc, char * argv[]) {
     const int32_t dump_state_switch = 1003;
 
     int c;
-    const char * short_opt = "thsqrbnfcdBDeamxipOLT:P:";
+    const char * short_opt = "thsqrbnfcdBDeamxipEOLT:P:";
 
     struct option long_opt[] = {
         {"help",          no_argument, NULL, 'h'},
@@ -123,6 +125,7 @@ int main(int argc, char * argv[]) {
         {"profile",         no_argument, NULL, 'p'},
         {"charset",         no_argument, NULL, 'c'},
         {"time",         no_argument, NULL, 't'},
+        {"optimize-epsilon",         no_argument, NULL, 'E'},
         {"optimize-global",         no_argument, NULL, 'O'},
         {"optimize-local",         no_argument, NULL, 'L'},
         {"remove-ors",         no_argument, NULL, 'x'},
@@ -182,7 +185,11 @@ int main(int argc, char * argv[]) {
         case 'c':
             charset_complexity = true;
             break;
-
+        
+        case 'E':
+            optimize_epsilon = true;
+            break;
+        
         case 'O':
             prefix_merge_global = true;
             suffix_merge_global = true;
@@ -345,6 +352,20 @@ int main(int argc, char * argv[]) {
     // Optimize automata before identifying connected components
     // "Global" optimizations
     // Start optimizations
+    
+    if(optimize_epsilon) {
+      if(!quiet) {
+        cout << "|--------------------------|" << endl;
+        cout << "| Linear Epsilon Reduction |" << endl;
+        cout << "|--------------------------|" << endl;
+        
+        cout << "Starting Eplison Removal..." << endl;
+      }
+      
+      ap.removeLinearEpsilons();
+    }
+    
+    // 
     if(optimize_global) {
         if(!quiet){
             cout << "|--------------------------|" << endl;

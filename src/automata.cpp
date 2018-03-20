@@ -66,6 +66,11 @@ void Automata::finalizeAutomata() {
         validateReportElement(parent);
         
     }
+    
+    // populate the report code map
+    for(auto e : reports) {
+      reportCodeMap[e->getReportCode()] = {e->getReportCode()};
+    }
 }
 
 /**
@@ -579,6 +584,10 @@ void Automata::setDumpState(bool dump_flag, uint64_t dump_cycle) {
  */
 void Automata::setEndOfData(bool eod) {
     end_of_data = eod;
+}
+
+void Automata::setMultiPop(bool multi) {
+    pd_multi_pop = multi;
 }
 
 
@@ -1774,6 +1783,9 @@ void Automata::automataToMNRLFile(string out_fn) {
                 case STE_T:
                     dst_port = MNRLDefs::H_STATE_INPUT;
                     break;
+                case PDSTATE_T:
+                    dst_port = MNRLDefs::H_PD_STATE_INPUT;
+                    break;
                 case COUNTER_T:
                     dst_port = Element::getPort(dst);
                     break;
@@ -2955,6 +2967,109 @@ uint32_t Automata::mergeCommonSuffixes(queue<STE *> &workq) {
     }
 
     return merged;
+}
+
+/**
+ * merge together two PDStates.
+ * second is an epison state
+ */
+void Automata::mergeEpsilon(PDState* first, PDState* second) {
+  // add all outputs from second to first
+  for(auto e : second->getOutputSTEPointers()){
+      STE *output = static_cast<STE*>(e.first);
+      addEdge(first, output);
+  }
+
+  // remove all edges from ste2 to output
+  for(auto e : second->getOutputSTEPointers()){
+      STE *output = static_cast<STE*>(e.first);
+      removeEdge(second, output);
+  }
+  
+  // deal with push/pop/peek
+  if(second->getPush()) {
+    first->setPushChar(second->getPushChar());
+  }
+  
+  first->setPop(first->getPop() + second->getPop());
+
+  if (second->doesPeek()) {
+    first->setStackSet(second->getStackSet());
+  }
+  
+  if (second->isReporting()) {
+    if(first->isReporting()) {
+      cout << "ping" << endl;
+      // both are reporting, generate new report code
+      string new_code = "__vasim__" + to_string(rc_cnt++);
+      vector<string> sequence(reportCodeMap[first->getReportCode()]);
+      vector<string> &tmp = reportCodeMap[second->getReportCode()];
+      sequence.insert(sequence.end(),tmp.begin(), tmp.end());
+      reportCodeMap[new_code] = sequence;
+      
+      first->setReportCode(new_code);
+      
+    } else {
+      first->setReporting(true);
+      first->setReportCode(second->getReportCode());
+    }
+    
+  }
+
+  removeElement(second);
+}
+
+/* This will remove linear chains of epsilons whenever possible */
+uint32_t Automata::removeLinearEpsilons() {
+  unmarkAllElements();
+  
+  deque<STE *> works;
+  for(auto &e : starts) {
+    e->mark();
+    works.push_back(e);
+  }
+  
+  return removeLinearEpsilons(works);
+}
+
+uint32_t Automata::removeLinearEpsilons(deque<STE *> &works) {
+  // we're going to perform a post-order traversal
+  // so first, push everything into the stack
+  
+  uint32_t merged = 0;
+  
+  while(!works.empty()) {
+    STE *root = works.back();
+    bool cont = false;
+    for(auto &p : root->getOutputSTEPointers()) {
+      auto e = dynamic_cast<STE*>(p.first);
+      if(!e->isMarked()) {
+        e->mark();
+        works.push_back(e);
+        cont = true;
+        break;
+      }
+    }
+    
+    // if cont is true, we found a new node and should "recurse"
+    if(cont) {
+      continue;
+    }
+    
+    // at this point, we've visited all of our children
+    // Now we can perform the linear epsilon removal 
+    if(root->getType() == PDSTATE_T) {
+      works.pop_back();
+      PDState *first = dynamic_cast<PDState*>(root);
+      if(first->linearEpsilon(pd_multi_pop)) {
+        PDState *second = dynamic_cast<PDState*>(first->getOutputSTEPointers().begin()->first);
+        mergeEpsilon(first, second);
+        merged += 1;
+      }
+    }
+  }
+  
+  return merged;
 }
 
 /**

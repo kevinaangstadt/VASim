@@ -18,9 +18,11 @@
 
 class STE: public Element {
 
-    enum Start { NONE, START_OF_DATA, ALL_INPUT };
+    
 
 protected:
+  
+    enum Start { NONE, START_OF_DATA, ALL_INPUT };
 
     std::string symbol_set;
     std::bitset<256> bit_column;

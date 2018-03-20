@@ -29,9 +29,18 @@ public:
     bool getPush();
     uint8_t getPop();
     uint8_t getPushChar();
+    std::bitset<256>& getStackSet();
+    
+    void setPushChar(uint8_t);
+    void setPop(uint8_t);
+    void setStackSet(std::bitset<256> &);
 
     bool isInputEpsilon();
     bool doesPeek();
+    
+    bool linearEpsilon(bool);
+    
+    virtual std::shared_ptr<MNRL::MNRLNode> toMNRLObj();
 
 protected:
     std::string stack_set;
