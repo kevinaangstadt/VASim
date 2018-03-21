@@ -1,4 +1,5 @@
 #include "pdstate.h"
+#include <stdio.h>
 
 using namespace std;
 using namespace MNRL;
@@ -98,12 +99,14 @@ shared_ptr<MNRLNode> PDState::toMNRLObj() {
     }
     
     if(push) {
+      char tmp[10];
+      sprintf(tmp, "\\x%02x", push_char);
       if(!isInputEpsilon()) {
         return shared_ptr<MNRLHPDState>(new MNRLHPDState(
           symbol_set,
           stack_set,
           pop,
-          to_string(push_char),
+          string(tmp),
           en,
           id,
           reporting,
@@ -114,7 +117,7 @@ shared_ptr<MNRLNode> PDState::toMNRLObj() {
         return shared_ptr<MNRLHPDState>(new MNRLHPDState(
           stack_set,
           pop,
-          to_string(push_char),
+          string(tmp),
           en,
           id,
           reporting,
