@@ -47,7 +47,7 @@ private:
 
     // our DPDA stack
     std::deque<uint8_t> pdstack;
-    bool pd_multi_pop = true; // FIXME set a flag
+    bool pd_multi_pop = false;
     uint32_t rc_cnt = 0;
     std::unordered_map<std::string, std::vector<std::string>> reportCodeMap;
 

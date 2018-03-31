@@ -37,6 +37,7 @@ void usage(char * argv) {
     printf("      --graph               Output automata as .graph file for HyperScan.\n");
 
     printf("\n OPTIMIZATIONS:\n");    
+    printf("      --multipop            Enable multipop for epsilon reductions\n");
     printf("  -E, --optimize-epsilon    Reduce linear epsilon transitions.\n");
     printf("  -O, --optimize-global     Run all optimizations on all automata subgraphs.\n");
     printf("  -L, --optimize-logal      Run all optimizations on automata subgraphs after partitioned among parallel threads.\n");
@@ -78,6 +79,7 @@ int main(int argc, char * argv[]) {
     bool to_anml = false;
     bool to_mnrl = false;
     bool time = false;
+    bool multipop = false;
     bool optimize_epsilon = false;
     bool optimize_global = false;
     bool prefix_merge_global = false;
@@ -105,6 +107,7 @@ int main(int argc, char * argv[]) {
     const int32_t fanin_switch = 1001;
     const int32_t fanout_switch = 1002;
     const int32_t dump_state_switch = 1003;
+    const int32_t multipop_switch = 9999;
 
     int c;
     const char * short_opt = "thsqrbnfcdBDeamxipEOLT:P:";
@@ -125,6 +128,7 @@ int main(int argc, char * argv[]) {
         {"profile",         no_argument, NULL, 'p'},
         {"charset",         no_argument, NULL, 'c'},
         {"time",         no_argument, NULL, 't'},
+        {"multipop",     no_argument, NULL, multipop_switch},
         {"optimize-epsilon",         no_argument, NULL, 'E'},
         {"optimize-global",         no_argument, NULL, 'O'},
         {"optimize-local",         no_argument, NULL, 'L'},
@@ -266,6 +270,10 @@ int main(int argc, char * argv[]) {
             dump_state = true;
             dump_state_cycle = atoi(optarg);
             break;
+        
+        case multipop_switch:
+            multipop = true;
+            break;
                         
         default:
             fprintf(stderr, "%s: invalid option -- %c\n", argv[0], c);
@@ -360,7 +368,12 @@ int main(int argc, char * argv[]) {
         cout << "|--------------------------|" << endl;
         
         cout << "Starting Eplison Removal..." << endl;
+        cout << " |\n -----> multipop is " << std::boolalpha << multipop << endl;
       }
+      
+
+      ap.setMultiPop(multipop);
+      
       
       ap.removeLinearEpsilons();
     }
