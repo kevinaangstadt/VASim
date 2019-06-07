@@ -22,7 +22,7 @@ class MNRLAdapter{
         uint32_t unique_ids = 0;
     
     public:
-        MNRLAdapter(std::string);
+        MNRLAdapter(std::string&);
         void parse(std::unordered_map<std::string, Element*>&, 
                std::vector<STE*>&,
                std::vector<Element*>&,
@@ -30,9 +30,9 @@ class MNRLAdapter{
                std::string *,
                std::vector<SpecialElement*>&);
         
-        STE *parseSTE(std::shared_ptr<MNRL::MNRLHState>);
-        Gate *parseGate(std::shared_ptr<MNRL::MNRLBoolean>);
-        Counter *parseCounter(std::shared_ptr<MNRL::MNRLUpCounter>);
+        STE *parseSTE(MNRL::MNRLHState*);
+        Gate *parseGate(MNRL::MNRLBoolean*);
+        Counter *parseCounter(MNRL::MNRLUpCounter*);
 };
 
 #endif
